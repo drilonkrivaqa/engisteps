@@ -13,35 +13,80 @@ class FavoritesScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final favorites = ref.watch(favoritesProvider);
+    final presets = ref.watch(favoritePresetsProvider);
     return AppScaffold(
       title: 'Favorites',
-      body: favorites.when(
-        data: (ids) {
-          if (ids.isEmpty) {
-            return const EmptyState(title: 'No favorites', message: 'Tap heart on any tool to save it.');
-          }
-          final tools = ToolRegistry.tools.where((t) => ids.contains(t.id)).toList();
-          return ListView(
-            children: tools
-                .map((t) => ListTile(title: Text(t.title), subtitle: Text(t.category), onTap: () => context.push('/tool/${t.id}')))
-                .toList(),
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Error: $e')),
+      body: DefaultTabController(
+        length: 2,
+        child: Column(
+          children: [
+            const TabBar(tabs: [Tab(text: 'Tools'), Tab(text: 'Presets')]),
+            Expanded(
+              child: TabBarView(
+                children: [
+                  favorites.when(
+                    data: (ids) {
+                      if (ids.isEmpty) {
+                        return const EmptyState(title: 'No favorites', message: 'Tap heart on any tool to save it.');
+                      }
+                      final tools = ToolRegistry.tools.where((t) => ids.contains(t.id)).toList();
+                      return ListView(
+                        children: tools
+                            .map((t) => ListTile(title: Text(t.title), subtitle: Text(t.category), onTap: () => context.push('/tool/${t.id}')))
+                            .toList(),
+                      );
+                    },
+                    loading: () => const Center(child: CircularProgressIndicator()),
+                    error: (e, _) => Center(child: Text('Error: $e')),
+                  ),
+                  presets.when(
+                    data: (items) {
+                      if (items.isEmpty) {
+                        return const EmptyState(title: 'No presets yet', message: 'Save preset values from any tool detail page.');
+                      }
+                      return ListView(
+                        children: items
+                            .map((p) => ListTile(
+                                  title: Text(p.name),
+                                  subtitle: Text('${ToolRegistry.byId(p.toolId).title} • ${p.values.entries.map((e) => '${e.key}=${e.value}').join(', ')}'),
+                                  onTap: () => context.push('/tool/${p.toolId}'),
+                                ))
+                            .toList(),
+                      );
+                    },
+                    loading: () => const Center(child: CircularProgressIndicator()),
+                    error: (e, _) => Center(child: Text('Error: $e')),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
-class PresetManagerScreen extends StatelessWidget {
+class PresetManagerScreen extends ConsumerWidget {
   const PresetManagerScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return const AppScaffold(
+  Widget build(BuildContext context, WidgetRef ref) {
+    final presets = ref.watch(favoritePresetsProvider);
+    return AppScaffold(
       title: 'Preset manager',
-      body: EmptyState(title: 'No presets yet', message: 'Rename/reorder/delete controls will appear after saving presets.'),
+      body: presets.when(
+        data: (items) {
+          if (items.isEmpty) {
+            return const EmptyState(title: 'No presets yet', message: 'Rename/reorder/delete controls will appear after saving presets.');
+          }
+          return ListView(
+            children: items.map((p) => ListTile(title: Text(p.name), subtitle: Text(ToolRegistry.byId(p.toolId).title))).toList(),
+          );
+        },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, _) => Center(child: Text('Error: $e')),
+      ),
     );
   }
 }

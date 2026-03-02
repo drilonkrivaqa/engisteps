@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../features/classroom/presentation/classroom_screens.dart';
 import '../../features/favorites/presentation/favorites_screens.dart';
@@ -8,6 +9,7 @@ import '../../features/history/presentation/history_screens.dart';
 import '../../features/home/presentation/home_screen.dart';
 import '../../features/onboarding/presentation/onboarding_screens.dart';
 import '../../features/search/presentation/search_screens.dart';
+import '../../features/settings/data/settings_repository.dart';
 import '../../features/settings/presentation/settings_screens.dart';
 import '../../features/tools/presentation/tools_screens.dart';
 import '../widgets/stub_screen.dart';
@@ -17,8 +19,20 @@ final _shellNavigatorHome = GlobalKey<NavigatorState>();
 final _shellNavigatorTools = GlobalKey<NavigatorState>();
 final _shellNavigatorFavorites = GlobalKey<NavigatorState>();
 final _shellNavigatorSettings = GlobalKey<NavigatorState>();
+final _shellNavigatorClassroom = GlobalKey<NavigatorState>();
+
+const _onboardingRoutes = {
+  '/welcome',
+  '/pick-track',
+  '/permissions',
+  '/create-account',
+  '/sign-in',
+  '/forgot-password',
+  '/profile-setup',
+};
 
 final routerProvider = Provider<GoRouter>((ref) {
+  final professorMode = ref.watch(settingsControllerProvider).professorMode;
   return GoRouter(
     initialLocation: '/splash',
     navigatorKey: _rootNavigatorKey,
@@ -38,6 +52,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           StatefulShellBranch(navigatorKey: _shellNavigatorTools, routes: [GoRoute(path: '/tools', builder: (_, __) => const ToolsHubScreen())]),
           StatefulShellBranch(navigatorKey: _shellNavigatorFavorites, routes: [GoRoute(path: '/favorites', builder: (_, __) => const FavoritesScreen())]),
           StatefulShellBranch(navigatorKey: _shellNavigatorSettings, routes: [GoRoute(path: '/settings', builder: (_, __) => const SettingsScreen())]),
+          StatefulShellBranch(
+            navigatorKey: _shellNavigatorClassroom,
+            routes: [GoRoute(path: '/classroom/dashboard', builder: (_, __) => const ProfessorDashboardScreen())],
+          ),
         ],
       ),
       GoRoute(path: '/search', builder: (_, __) => const SearchScreen()),
@@ -59,36 +77,62 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/settings/about', builder: (_, __) => const AboutScreen()),
       GoRoute(path: '/settings/legal', builder: (_, __) => const LegalScreen()),
       GoRoute(path: '/settings/feedback', builder: (_, __) => const FeedbackScreen()),
-      GoRoute(path: '/classroom/dashboard', builder: (_, __) => const ProfessorDashboardScreen()),
       GoRoute(path: '/classroom/template-builder', builder: (_, __) => const TemplateBuilderScreen()),
       GoRoute(path: '/classroom/template-preview', builder: (_, __) => const TemplatePreviewScreen()),
       GoRoute(path: '/classroom/share-template', builder: (_, __) => const ShareTemplateScreen()),
     ],
-    redirect: (context, state) {
-      if (state.fullPath == '/splash') return '/welcome';
-      if (state.fullPath == '/welcome') return '/home';
+    redirect: (context, state) async {
+      final prefs = await SharedPreferences.getInstance();
+      final hasCompletedOnboarding = prefs.getBool('onboarding_complete') ?? false;
+      final isOnboardingRoute = _onboardingRoutes.contains(state.fullPath);
+      final isClassroomRoute = state.fullPath?.startsWith('/classroom') ?? false;
+
+      if (state.fullPath == '/splash') {
+        return hasCompletedOnboarding ? '/home' : '/welcome';
+      }
+
+      if (!hasCompletedOnboarding && !isOnboardingRoute) {
+        return '/welcome';
+      }
+
+      if (hasCompletedOnboarding && isOnboardingRoute) {
+        return '/home';
+      }
+
+      if (state.fullPath == '/profile-setup') {
+        await prefs.setBool('onboarding_complete', true);
+      }
+
+      if (isClassroomRoute && !professorMode) {
+        return '/home';
+      }
+
       return null;
     },
   );
 });
 
-class BottomNavShell extends StatelessWidget {
+class BottomNavShell extends ConsumerWidget {
   const BottomNavShell({super.key, required this.navigationShell});
   final StatefulNavigationShell navigationShell;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final professorMode = ref.watch(settingsControllerProvider).professorMode;
+    final destinations = [
+      const NavigationDestination(icon: Icon(Icons.home_outlined), label: 'Home'),
+      const NavigationDestination(icon: Icon(Icons.calculate_outlined), label: 'Tools'),
+      const NavigationDestination(icon: Icon(Icons.favorite_border), label: 'Favorites'),
+      const NavigationDestination(icon: Icon(Icons.settings_outlined), label: 'Settings'),
+      if (professorMode) const NavigationDestination(icon: Icon(Icons.school_outlined), label: 'Classroom'),
+    ];
+
     return Scaffold(
       body: navigationShell,
       bottomNavigationBar: NavigationBar(
-        selectedIndex: navigationShell.currentIndex,
+        selectedIndex: professorMode ? navigationShell.currentIndex : navigationShell.currentIndex.clamp(0, 3).toInt(),
         onDestinationSelected: (index) => navigationShell.goBranch(index),
-        destinations: const [
-          NavigationDestination(icon: Icon(Icons.home_outlined), label: 'Home'),
-          NavigationDestination(icon: Icon(Icons.calculate_outlined), label: 'Tools'),
-          NavigationDestination(icon: Icon(Icons.favorite_border), label: 'Favorites'),
-          NavigationDestination(icon: Icon(Icons.settings_outlined), label: 'Settings'),
-        ],
+        destinations: destinations,
       ),
     );
   }
