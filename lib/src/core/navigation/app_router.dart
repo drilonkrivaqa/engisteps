@@ -99,6 +99,9 @@ final routerProvider = Provider<GoRouter>((ref) {
         return '/home';
       }
 
+      if (state.fullPath == '/profile-setup') {
+        await prefs.setBool('onboarding_complete', true);
+      }
 
       if (isClassroomRoute && !professorMode) {
         return '/home';
