@@ -37,7 +37,7 @@ class ToolsHubScreen extends StatelessWidget {
   }
 }
 
-enum ToolSort { popular, az, recent }
+enum ToolSort { az, recent }
 
 class CategoryScreen extends ConsumerStatefulWidget {
   const CategoryScreen({super.key, required this.category});
@@ -49,7 +49,7 @@ class CategoryScreen extends ConsumerStatefulWidget {
 
 class _CategoryScreenState extends ConsumerState<CategoryScreen> {
   final _searchController = TextEditingController();
-  ToolSort _sort = ToolSort.popular;
+  ToolSort _sort = ToolSort.az;
   bool _filterHasSteps = false;
   bool _filterHasGraph = false;
   bool _filterCore = false;
@@ -78,9 +78,6 @@ class _CategoryScreenState extends ConsumerState<CategoryScreen> {
     }).toList();
 
     switch (_sort) {
-      case ToolSort.popular:
-        tools.sort((a, b) => b.popularity.compareTo(a.popularity));
-        break;
       case ToolSort.az:
         tools.sort((a, b) => a.title.compareTo(b.title));
         break;
@@ -119,29 +116,32 @@ class _CategoryScreenState extends ConsumerState<CategoryScreen> {
                   value: _sort,
                   decoration: const InputDecoration(labelText: 'Sort'),
                   items: const [
-                    DropdownMenuItem(value: ToolSort.popular, child: Text('Popular')),
                     DropdownMenuItem(value: ToolSort.az, child: Text('A–Z')),
                     DropdownMenuItem(value: ToolSort.recent, child: Text('Recently used')),
                   ],
-                  onChanged: (v) => setState(() => _sort = v ?? ToolSort.popular),
+                  onChanged: (v) => setState(() => _sort = v ?? ToolSort.az),
                 ),
-                CheckboxListTile(
-                  contentPadding: EdgeInsets.zero,
-                  value: _filterHasSteps,
-                  title: const Text('Has steps'),
-                  onChanged: (v) => setState(() => _filterHasSteps = v ?? false),
-                ),
-                CheckboxListTile(
-                  contentPadding: EdgeInsets.zero,
-                  value: _filterHasGraph,
-                  title: const Text('Has graph'),
-                  onChanged: (v) => setState(() => _filterHasGraph = v ?? false),
-                ),
-                CheckboxListTile(
-                  contentPadding: EdgeInsets.zero,
-                  value: _filterCore,
-                  title: const Text('Core tools'),
-                  onChanged: (v) => setState(() => _filterCore = v ?? false),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    FilterChip(
+                      selected: _filterHasSteps,
+                      label: const Text('Has steps'),
+                      onSelected: (v) => setState(() => _filterHasSteps = v),
+                    ),
+                    FilterChip(
+                      selected: _filterHasGraph,
+                      label: const Text('Has graph'),
+                      onSelected: (v) => setState(() => _filterHasGraph = v),
+                    ),
+                    FilterChip(
+                      selected: _filterCore,
+                      label: const Text('Core'),
+                      onSelected: (v) => setState(() => _filterCore = v),
+                    ),
+                  ],
                 ),
               ],
             ),
