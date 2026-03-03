@@ -26,6 +26,8 @@ class ToolsHubScreen extends ConsumerWidget {
     final sort = ref.watch(_toolsSortProvider);
     final coreOnly = ref.watch(_coreOnlyProvider);
     final selectedCategory = ref.watch(_categoryFilterProvider);
+    final history = ref.watch(historyProvider);
+    final favorites = ref.watch(favoritesProvider);
 
     final allCategories = ToolRegistry.categories();
     final tools = ToolRegistry.tools.where((t) {
@@ -60,6 +62,94 @@ class ToolsHubScreen extends ConsumerWidget {
       ],
       body: ListView(
         children: [
+          SectionCard(
+            title: 'Smart collections',
+            subtitle: 'Jump into focused tool sets based on your current workflow.',
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _collectionChip(
+                  context,
+                  label: 'Core essentials',
+                  icon: Icons.star_outline,
+                  onTap: () {
+                    ref.read(_coreOnlyProvider.notifier).state = true;
+                    ref.read(_toolsSortProvider.notifier).state = ToolsSort.recommended;
+                  },
+                ),
+                _collectionChip(
+                  context,
+                  label: 'Most popular',
+                  icon: Icons.local_fire_department_outlined,
+                  onTap: () {
+                    ref.read(_coreOnlyProvider.notifier).state = false;
+                    ref.read(_toolsSortProvider.notifier).state = ToolsSort.popularity;
+                  },
+                ),
+                _collectionChip(
+                  context,
+                  label: 'A → Z discovery',
+                  icon: Icons.sort_by_alpha,
+                  onTap: () => ref.read(_toolsSortProvider.notifier).state = ToolsSort.aToZ,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          SectionCard(
+            title: 'Productivity lane',
+            subtitle: 'Continue from recent activity or open your favorite calculators.',
+            child: Column(
+              children: [
+                history.when(
+                  data: (items) {
+                    if (items.isEmpty) {
+                      return const ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: CircleAvatar(child: Icon(Icons.history_toggle_off)),
+                        title: Text('No recent tools yet'),
+                        subtitle: Text('Run any calculator and it will appear here.'),
+                      );
+                    }
+                    final recent = ToolRegistry.byId(items.first.toolId);
+                    return ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const CircleAvatar(child: Icon(Icons.history)),
+                      title: Text('Continue: ${recent.title}'),
+                      subtitle: Text('${recent.category} • ${recent.subcategory}'),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => context.push('/tool/${recent.id}'),
+                    );
+                  },
+                  loading: () => const LinearProgressIndicator(),
+                  error: (e, _) => Text('History unavailable: $e'),
+                ),
+                favorites.when(
+                  data: (ids) {
+                    if (ids.isEmpty) {
+                      return const SizedBox.shrink();
+                    }
+                    final favoriteTool = ToolRegistry.tools.firstWhere(
+                      (t) => ids.contains(t.id),
+                      orElse: () => ToolRegistry.tools.first,
+                    );
+                    return ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const CircleAvatar(child: Icon(Icons.favorite_border)),
+                      title: Text('Favorite shortcut: ${favoriteTool.title}'),
+                      subtitle: const Text('Open your saved go-to calculator instantly.'),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => context.push('/tool/${favoriteTool.id}'),
+                    );
+                  },
+                  loading: () => const SizedBox.shrink(),
+                  error: (e, _) => Text('Favorites unavailable: $e'),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
           SectionCard(
             title: 'Browse',
             subtitle: 'Filter fast, find what you need, run tools in seconds.',
@@ -128,6 +218,20 @@ class ToolsHubScreen extends ConsumerWidget {
           const SizedBox(height: 80),
         ],
       ),
+    );
+  }
+
+  Widget _collectionChip(
+    BuildContext context, {
+    required String label,
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    return ActionChip(
+      avatar: Icon(icon, size: 18),
+      label: Text(label),
+      onPressed: onTap,
+      side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
     );
   }
 }
