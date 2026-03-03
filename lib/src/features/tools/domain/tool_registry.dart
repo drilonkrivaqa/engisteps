@@ -185,8 +185,8 @@ class ToolRegistry {
       category: 'Physics',
       description: 'Range, flight time, and max height.',
       inputs: const [
-        ToolInputSchema(key: 'v0', label: 'v0 (m/s)', defaultValue: '20'),
-        ToolInputSchema(key: 'theta', label: 'θ (deg)', defaultValue: '45'),
+        ToolInputSchema(key: 'v0', label: 'v0', defaultValue: '20', unit: 'm/s', examples: ['10', '20', '50'], min: 0),
+        ToolInputSchema(key: 'theta', label: 'θ', type: ToolInputType.angle, defaultValue: '45', examples: ['30', '45', '60']),
       ],
       compute: (m) {
         const g = 9.81;
@@ -219,15 +219,28 @@ class ToolRegistry {
       category: 'Physics',
       description: 'Ohm law and equivalent resistance.',
       inputs: const [
-        ToolInputSchema(key: 'V', label: 'Voltage (V)', defaultValue: '12'),
-        ToolInputSchema(key: 'R1', label: 'R1 (Ω)', defaultValue: '100'),
-        ToolInputSchema(key: 'R2', label: 'R2 (Ω)', defaultValue: '200'),
+        ToolInputSchema(key: 'V', label: 'Voltage', defaultValue: '12', unit: 'V', min: 0),
+        ToolInputSchema(key: 'R1', label: 'R1', defaultValue: '100', unitOptions: [
+          ToolUnitOption(symbol: 'Ω', factorToBase: 1),
+          ToolUnitOption(symbol: 'kΩ', factorToBase: 1e3),
+          ToolUnitOption(symbol: 'MΩ', factorToBase: 1e6),
+        ], examples: ['100', '1000'], min: 0),
+        ToolInputSchema(key: 'R2', label: 'R2', defaultValue: '200', unitOptions: [
+          ToolUnitOption(symbol: 'Ω', factorToBase: 1),
+          ToolUnitOption(symbol: 'kΩ', factorToBase: 1e3),
+          ToolUnitOption(symbol: 'MΩ', factorToBase: 1e6),
+        ], examples: ['220', '1000'], min: 0),
+        ToolInputSchema(key: 'mode', label: 'Connection', type: ToolInputType.dropdown, options: [
+          ToolSelectOption(label: 'Series', value: 0),
+          ToolSelectOption(label: 'Parallel', value: 1),
+        ]),
       ],
       compute: (m) {
         final rs = m['R1']! + m['R2']!;
         final rp = (m['R1']! * m['R2']!) / (m['R1']! + m['R2']!);
-        final i = m['V']! / rs;
-        return ToolResult(mainResult: 'Series Req=${_n(rs)} Ω', secondaryResults: [MapEntry('Parallel Req', '${_n(rp)} Ω'), MapEntry('Current (series)', '${_n(i)} A')]);
+        final selectedReq = (m['mode'] ?? 0) == 1 ? rp : rs;
+        final i = m['V']! / selectedReq;
+        return ToolResult(mainResult: 'Req=${_n(selectedReq)} Ω', secondaryResults: [MapEntry('Series Req', '${_n(rs)} Ω'), MapEntry('Parallel Req', '${_n(rp)} Ω'), MapEntry('Current', '${_n(i)} A')]);
       },
     ),
     Tool(
@@ -236,9 +249,19 @@ class ToolRegistry {
       category: 'Physics',
       description: 'Series/parallel capacitance and stored energy.',
       inputs: const [
-        ToolInputSchema(key: 'C1', label: 'C1 (F)', defaultValue: '0.001'),
-        ToolInputSchema(key: 'C2', label: 'C2 (F)', defaultValue: '0.002'),
-        ToolInputSchema(key: 'V', label: 'Voltage (V)', defaultValue: '10'),
+        ToolInputSchema(key: 'C1', label: 'C1', defaultValue: '1', unitOptions: [
+          ToolUnitOption(symbol: 'F', factorToBase: 1),
+          ToolUnitOption(symbol: 'mF', factorToBase: 1e-3),
+          ToolUnitOption(symbol: 'µF', factorToBase: 1e-6),
+          ToolUnitOption(symbol: 'nF', factorToBase: 1e-9),
+        ], examples: ['1', '10', '100']),
+        ToolInputSchema(key: 'C2', label: 'C2', defaultValue: '2', unitOptions: [
+          ToolUnitOption(symbol: 'F', factorToBase: 1),
+          ToolUnitOption(symbol: 'mF', factorToBase: 1e-3),
+          ToolUnitOption(symbol: 'µF', factorToBase: 1e-6),
+          ToolUnitOption(symbol: 'nF', factorToBase: 1e-9),
+        ], examples: ['1', '10', '100']),
+        ToolInputSchema(key: 'V', label: 'Voltage', defaultValue: '10', unit: 'V', min: 0),
       ],
       compute: (m) {
         final cp = m['C1']! + m['C2']!;
@@ -300,10 +323,17 @@ class ToolRegistry {
       category: 'Circuits',
       description: 'Time constant and voltage at time t.',
       inputs: const [
-        ToolInputSchema(key: 'R', label: 'R (Ω)', defaultValue: '1000'),
-        ToolInputSchema(key: 'C', label: 'C (F)', defaultValue: '0.001'),
-        ToolInputSchema(key: 'Vin', label: 'Vin (V)', defaultValue: '5'),
-        ToolInputSchema(key: 't', label: 't (s)', defaultValue: '1'),
+        ToolInputSchema(key: 'R', label: 'R', defaultValue: '1', unitOptions: [
+          ToolUnitOption(symbol: 'Ω', factorToBase: 1),
+          ToolUnitOption(symbol: 'kΩ', factorToBase: 1e3),
+        ], examples: ['1', '10']),
+        ToolInputSchema(key: 'C', label: 'C', defaultValue: '1', unitOptions: [
+          ToolUnitOption(symbol: 'F', factorToBase: 1),
+          ToolUnitOption(symbol: 'mF', factorToBase: 1e-3),
+          ToolUnitOption(symbol: 'µF', factorToBase: 1e-6),
+        ], examples: ['1', '10', '100']),
+        ToolInputSchema(key: 'Vin', label: 'Vin', defaultValue: '5', unit: 'V'),
+        ToolInputSchema(key: 't', label: 't', type: ToolInputType.range, defaultValue: '1', min: 0, max: 10, unit: 's'),
       ],
       compute: (m) {
         final tau = m['R']! * m['C']!;
