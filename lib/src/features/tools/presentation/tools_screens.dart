@@ -55,6 +55,16 @@ class ToolsHubScreen extends ConsumerWidget {
       title: 'Tools',
       actions: [
         IconButton(
+          tooltip: 'Daily challenge',
+          onPressed: () {
+            final challengePool = ToolRegistry.tools.where((tool) => tool.isCore).toList();
+            challengePool.sort((a, b) => b.popularity.compareTo(a.popularity));
+            final selected = challengePool.isEmpty ? ToolRegistry.tools.first : challengePool.first;
+            context.push('/tool/${selected.id}');
+          },
+          icon: const Icon(Icons.emoji_events_outlined),
+        ),
+        IconButton(
           tooltip: 'Search',
           onPressed: () => context.push('/search'),
           icon: const Icon(Icons.search),
@@ -92,6 +102,41 @@ class ToolsHubScreen extends ConsumerWidget {
                   label: 'A → Z discovery',
                   icon: Icons.sort_by_alpha,
                   onTap: () => ref.read(_toolsSortProvider.notifier).state = ToolsSort.aToZ,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          SectionCard(
+            title: 'Guided learning playlists',
+            subtitle: 'Structured paths to help you practice with progression.',
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _collectionChip(
+                  context,
+                  label: 'Electronics starter pack',
+                  icon: Icons.memory_outlined,
+                  onTap: () => ref.read(_categoryFilterProvider.notifier).state = 'Electronics',
+                ),
+                _collectionChip(
+                  context,
+                  label: 'Signals crash review',
+                  icon: Icons.graphic_eq,
+                  onTap: () {
+                    ref.read(_categoryFilterProvider.notifier).state = 'Signals';
+                    ref.read(_toolsSortProvider.notifier).state = ToolsSort.popularity;
+                  },
+                ),
+                _collectionChip(
+                  context,
+                  label: 'Math warm-up',
+                  icon: Icons.functions,
+                  onTap: () {
+                    ref.read(_categoryFilterProvider.notifier).state = 'Math';
+                    ref.read(_coreOnlyProvider.notifier).state = true;
+                  },
                 ),
               ],
             ),

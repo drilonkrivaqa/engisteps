@@ -11,6 +11,7 @@ class AppTheme {
     );
 
     return base.copyWith(
+      scaffoldBackgroundColor: const Color(0xFFF6F7FB),
       pageTransitionsTheme: const PageTransitionsTheme(
         builders: {
           TargetPlatform.android: ZoomPageTransitionsBuilder(),
@@ -20,14 +21,27 @@ class AppTheme {
           TargetPlatform.linux: ZoomPageTransitionsBuilder(),
         },
       ),
-      appBarTheme: const AppBarTheme(centerTitle: false),
+      appBarTheme: AppBarTheme(
+        centerTitle: false,
+        backgroundColor: Colors.transparent,
+        foregroundColor: base.colorScheme.onSurface,
+        elevation: 0,
+      ),
       cardTheme: const CardThemeData(
-        elevation: 0.6,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.all(Radius.circular(16)),
+        elevation: 0,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(18))),
+      ),
+      navigationBarTheme: NavigationBarThemeData(
+        indicatorColor: base.colorScheme.primaryContainer,
+        labelTextStyle: WidgetStateProperty.resolveWith(
+          (states) => TextStyle(
+            fontWeight: states.contains(WidgetState.selected) ? FontWeight.w700 : FontWeight.w500,
+          ),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: Colors.white,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
       ),
     );
@@ -41,13 +55,21 @@ class AppTheme {
     );
 
     return base.copyWith(
+      appBarTheme: AppBarTheme(
+        backgroundColor: Colors.transparent,
+        foregroundColor: base.colorScheme.onSurface,
+        elevation: 0,
+      ),
       cardTheme: const CardThemeData(
-        elevation: 0.6,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.all(Radius.circular(16)),
-        ),
+        elevation: 0,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(18))),
+      ),
+      navigationBarTheme: NavigationBarThemeData(
+        indicatorColor: base.colorScheme.primaryContainer,
       ),
       inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: base.colorScheme.surfaceContainerHigh,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
       ),
     );
