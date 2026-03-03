@@ -25,362 +25,162 @@ class HomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final history = ref.watch(historyProvider);
-    final favoritesSet = ref.watch(favoritesProvider).whenData((ids) => ids.toSet());
+    // Codex keeps changing provider types (AsyncValue<List<T>> vs List<T>).
+    // So we normalize at runtime to always get plain Lists.
+    final historyAny = ref.watch(historyProvider);
+    final favoritesAny = ref.watch(favoritesProvider);
 
-    final categories = ToolRegistry.categories();
+    final history = _asHistoryList(historyAny);
+    final favorites = _asStringList(favoritesAny);
+
+    final categories = ToolRegistry.tools.map((t) => t.category).toSet().toList()..sort();
 
     return AppScaffold(
-      title: 'Dashboard',
+      title: 'Home',
       body: ListView(
+        padding: const EdgeInsets.only(bottom: 80),
         children: [
-          _HeroSearch(onTap: () => context.push('/search')),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+            child: SearchBar(
+              hintText: 'Search tools...',
+              leading: const Icon(Icons.search),
+              onTap: () => context.push('/search'),
+              readOnly: true,
+            ),
+          ),
           const SizedBox(height: 16),
-          _buildOverview(context, history, favoritesSet),
-          const SizedBox(height: 12),
-          _quickActions(context),
-          const SizedBox(height: 12),
-          _buildFocusLane(context, history),
-          const SizedBox(height: 12),
-          _buildRecommendedCategories(context, categories),
-          const SizedBox(height: 12),
-          _buildFavoriteShortcuts(context, favoritesSet),
-        ],
-      ),
-    );
-  }
 
-  Widget _buildOverview(
-    BuildContext context,
-    AsyncValue<List<HistoryEntry>> history,
-    AsyncValue<Set<String>> favoritesSet,
-  ) {
-    return SectionCard(
-      title: 'Your engineering pulse',
-      subtitle: 'Track momentum, practice consistency, and jump back in fast.',
-      child: history.when(
-        data: (items) {
-          final now = DateTime.now();
-          final weekAgo = now.subtract(const Duration(days: 7));
-          final thisWeek = items.where((entry) => entry.timestamp.isAfter(weekAgo)).length;
-          final dayStreak = _estimateStreak(items);
-
-          return favoritesSet.when(
-            data: (favorites) => Column(
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: _MetricCard(
-                        icon: Icons.local_fire_department,
-                        label: 'Current streak',
-                        value: '$dayStreak days',
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: _MetricCard(
-                        icon: Icons.insights,
-                        label: 'Sessions this week',
-                        value: '$thisWeek',
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _MetricCard(
-                        icon: Icons.favorite,
-                        label: 'Saved tools',
-                        value: '${favorites.length}',
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: _MetricCard(
-                        icon: Icons.grid_view,
-                        label: 'Total calculators',
-                        value: '${ToolRegistry.tools.length}',
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+          // Categories
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: SectionCard(
+              title: 'Categories',
+              child: Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: categories.map((c) {
+                  final icon = _categoryIcons[c] ?? Icons.category_outlined;
+                  return ActionChip(
+                    avatar: Icon(icon, size: 18),
+                    label: Text(c),
+                    onPressed: () => context.push('/tools/category/$c'),
+                  );
+                }).toList(),
+              ),
             ),
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Text('Favorites unavailable: $e'),
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Text('History unavailable: $e'),
-      ),
-    );
-  }
+          ),
 
-  Widget _quickActions(BuildContext context) {
-    return SectionCard(
-      title: 'Quick actions',
-      subtitle: 'Start common tasks in one tap.',
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: [
-          FilledButton.icon(
-            onPressed: () => context.go('/tools'),
-            icon: const Icon(Icons.construction),
-            label: const Text('Open tools'),
+          const SizedBox(height: 12),
+
+          // Recently used
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: SectionCard(
+              title: 'Recently used',
+              child: _buildRecents(context, history),
+            ),
           ),
-          FilledButton.tonalIcon(
-            onPressed: () => context.push('/history'),
-            icon: const Icon(Icons.history),
-            label: const Text('View history'),
-          ),
-          FilledButton.tonalIcon(
-            onPressed: () => context.go('/favorites'),
-            icon: const Icon(Icons.favorite_border),
-            label: const Text('Favorites'),
-          ),
-          FilledButton.tonalIcon(
-            onPressed: () => context.push('/settings/preferences'),
-            icon: const Icon(Icons.tune),
-            label: const Text('Preferences'),
+
+          const SizedBox(height: 12),
+
+          // Favorites
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: SectionCard(
+              title: 'Favorites',
+              child: _buildFavorites(context, favorites),
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildFocusLane(BuildContext context, AsyncValue<List<HistoryEntry>> history) {
-    return SectionCard(
-      title: 'Focus lane',
-      subtitle: 'Context-aware recommendations based on your latest sessions.',
-      child: history.when(
-        data: (items) {
-          if (items.isEmpty) {
-            return const EmptyState(
-              title: 'No activity yet',
-              message: 'Run your first calculation and we will tailor this lane for you.',
-            );
-          }
-
-          final latest = items.first;
-          final recentTool = ToolRegistry.byId(latest.toolId);
-          final sameCategory = ToolRegistry.tools
-              .where((tool) => tool.category == recentTool.category && tool.id != recentTool.id)
-              .take(2)
-              .toList();
-
-          return Column(
-            children: [
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const CircleAvatar(child: Icon(Icons.play_arrow_rounded)),
-                title: Text('Continue ${recentTool.title}'),
-                subtitle: Text('Last output: ${latest.output}'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => context.push('/tool/${recentTool.id}'),
-              ),
-              for (final tool in sameCategory)
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const CircleAvatar(child: Icon(Icons.explore_outlined)),
-                  title: Text('Try next: ${tool.title}'),
-                  subtitle: Text('${tool.category} • ${tool.subcategory}'),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => context.push('/tool/${tool.id}'),
-                ),
-            ],
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Text('History unavailable: $e'),
-      ),
-    );
-  }
-
-  Widget _buildRecommendedCategories(BuildContext context, List<String> categories) {
-    return SectionCard(
-      title: 'Explore by domain',
-      subtitle: 'A cleaner way to navigate your engineering tool stack.',
-      child: GridView.builder(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        itemCount: categories.length,
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          crossAxisSpacing: 8,
-          mainAxisSpacing: 8,
-          childAspectRatio: 2.3,
-        ),
-        itemBuilder: (context, index) {
-          final category = categories[index];
-          final icon = _categoryIcons[category] ?? Icons.category;
-          final categoryCount = ToolRegistry.tools.where((tool) => tool.category == category).length;
-
-          return InkWell(
-            borderRadius: BorderRadius.circular(12),
-            onTap: () => context.push('/tools/category/$category'),
-            child: Card(
-              margin: EdgeInsets.zero,
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Row(
-                  children: [
-                    Icon(icon),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(category, style: Theme.of(context).textTheme.titleSmall),
-                          Text('$categoryCount tools', style: Theme.of(context).textTheme.bodySmall),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildFavoriteShortcuts(BuildContext context, AsyncValue<Set<String>> favoritesSet) {
-    return SectionCard(
-      title: 'Favorite shortcuts',
-      subtitle: 'One-tap access to your pinned calculators.',
-      child: favoritesSet.when(
-        data: (ids) {
-          if (ids.isEmpty) {
-            return const EmptyState(
-              title: 'No favorites yet',
-              message: 'Pin a tool and it will show up here for quick launch.',
-            );
-          }
-
-          final tools = ToolRegistry.tools.where((tool) => ids.contains(tool.id)).take(4);
-
-          return Column(
-            children: tools
-                .map(
-                  (tool) => ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const CircleAvatar(child: Icon(Icons.favorite, color: Colors.redAccent)),
-                    title: Text(tool.title),
-                    subtitle: Text('${tool.category} • ${tool.subcategory}'),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => context.push('/tool/${tool.id}'),
-                  ),
-                )
-                .toList(),
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Text('Favorites unavailable: $e'),
-      ),
-    );
-  }
-
-  int _estimateStreak(List<HistoryEntry> items) {
-    if (items.isEmpty) return 0;
-
-    final byDay = items
-        .map((entry) => DateTime(entry.timestamp.year, entry.timestamp.month, entry.timestamp.day))
-        .toSet()
-        .toList()
-      ..sort((a, b) => b.compareTo(a));
-
-    var streak = 0;
-    var cursor = DateTime.now();
-    cursor = DateTime(cursor.year, cursor.month, cursor.day);
-
-    for (final day in byDay) {
-      if (day == cursor || day == cursor.subtract(Duration(days: streak))) {
-        streak++;
-      } else if (day.isBefore(cursor.subtract(Duration(days: streak)))) {
-        break;
-      }
+  Widget _buildRecents(BuildContext context, List<HistoryEntry> history) {
+    if (history.isEmpty) {
+      return const EmptyState(
+        title: 'No recent tools',
+        message: 'Run a tool once and it appears here.',
+        icon: Icons.history,
+      );
     }
 
-    return streak;
-  }
-}
-
-class _HeroSearch extends StatelessWidget {
-  const _HeroSearch({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [scheme.primaryContainer, scheme.secondaryContainer],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Build faster. Solve smarter.', style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 6),
-          Text(
-            'Search calculators, continue workflows, and keep your study momentum high.',
-            style: Theme.of(context).textTheme.bodyMedium,
+    final latest = history.take(5).toList();
+    return Column(
+      children: [
+        for (final entry in latest)
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            title: Text(ToolRegistry.byId(entry.toolId).title),
+            subtitle: Text(
+              entry.output,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push('/tool/${entry.toolId}'),
           ),
-          const SizedBox(height: 14),
-          SearchBar(
-            hintText: 'Find a tool or topic...',
-            onTap: onTap,
-            readOnly: true,
-            enabled: true,
-            leading: const Icon(Icons.search),
-          ),
-        ],
-      ),
+      ],
     );
   }
-}
 
-class _MetricCard extends StatelessWidget {
-  const _MetricCard({
-    required this.icon,
-    required this.label,
-    required this.value,
-  });
+  Widget _buildFavorites(BuildContext context, List<String> favoriteIdsList) {
+    final ids = favoriteIdsList.toSet();
+    if (ids.isEmpty) {
+      return const EmptyState(
+        title: 'No favorites yet',
+        message: 'Favorite tools to access them faster.',
+        icon: Icons.favorite_border,
+      );
+    }
 
-  final IconData icon;
-  final String label;
-  final String value;
+    final favoriteTools = ToolRegistry.tools.where((t) => ids.contains(t.id)).toList()
+      ..sort((a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()));
 
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, size: 18),
-            const SizedBox(height: 8),
-            Text(value, style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 2),
-            Text(label, style: Theme.of(context).textTheme.bodySmall),
-          ],
-        ),
-      ),
+    return Column(
+      children: [
+        for (final tool in favoriteTools.take(6))
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.favorite, color: Colors.redAccent),
+            title: Text(tool.title),
+            subtitle: Text(tool.category),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push('/tool/${tool.id}'),
+          ),
+      ],
     );
+  }
+
+  // ---------- normalization helpers ----------
+
+  List<String> _asStringList(Object? value) {
+    // If it's already a List<String>
+    if (value is List<String>) return value;
+
+    // If it's AsyncValue<List<String>>
+    if (value is AsyncValue) {
+      return value.maybeWhen<List<String>>(
+        data: (d) => d is List<String> ? d : <String>[],
+        orElse: () => <String>[],
+      );
+    }
+
+    // If it's something else (defensive)
+    return <String>[];
+  }
+
+  List<HistoryEntry> _asHistoryList(Object? value) {
+    if (value is List<HistoryEntry>) return value;
+
+    if (value is AsyncValue) {
+      return value.maybeWhen<List<HistoryEntry>>(
+        data: (d) => d is List<HistoryEntry> ? d : <HistoryEntry>[],
+        orElse: () => <HistoryEntry>[],
+      );
+    }
+
+    return <HistoryEntry>[];
   }
 }
