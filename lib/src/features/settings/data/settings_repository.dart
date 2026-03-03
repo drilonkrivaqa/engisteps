@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+@immutable
 class AppSettings {
   const AppSettings({
     this.darkMode = false,
@@ -37,41 +38,47 @@ class SettingsController extends StateNotifier<AppSettings> {
     _load();
   }
 
+  static const _kDarkMode = 'dark_mode';
+  static const _kProfessorMode = 'professor_mode';
+  static const _kPrecision = 'precision';
+  static const _kSci = 'sci';
+
   Future<void> _load() async {
     final prefs = await SharedPreferences.getInstance();
     state = AppSettings(
-      darkMode: prefs.getBool('dark_mode') ?? false,
-      professorMode: prefs.getBool('professor_mode') ?? false,
-      decimalPrecision: prefs.getInt('precision') ?? 4,
-      scientificNotation: prefs.getBool('sci') ?? false,
+      darkMode: prefs.getBool(_kDarkMode) ?? false,
+      professorMode: prefs.getBool(_kProfessorMode) ?? false,
+      decimalPrecision: prefs.getInt(_kPrecision) ?? 4,
+      scientificNotation: prefs.getBool(_kSci) ?? false,
     );
   }
 
   Future<void> setDarkMode(bool v) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('dark_mode', v);
+    await prefs.setBool(_kDarkMode, v);
     state = state.copyWith(darkMode: v);
   }
 
   Future<void> setProfessorMode(bool v) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('professor_mode', v);
+    await prefs.setBool(_kProfessorMode, v);
     state = state.copyWith(professorMode: v);
   }
 
   Future<void> setPrecision(int v) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt('precision', v);
+    await prefs.setInt(_kPrecision, v);
     state = state.copyWith(decimalPrecision: v);
   }
 
   Future<void> setScientificNotation(bool v) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('sci', v);
+    await prefs.setBool(_kSci, v);
     state = state.copyWith(scientificNotation: v);
   }
 }
 
-final settingsControllerProvider = StateNotifierProvider<SettingsController, AppSettings>((ref) {
+final settingsControllerProvider =
+StateNotifierProvider<SettingsController, AppSettings>((ref) {
   return SettingsController();
 });

@@ -1,5 +1,4 @@
 import 'dart:convert';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -19,37 +18,39 @@ class HistoryEntry {
   final String output;
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'toolId': toolId,
-        'timestamp': timestamp.toIso8601String(),
-        'inputs': inputs,
-        'output': output,
-      };
+    'id': id,
+    'toolId': toolId,
+    'timestamp': timestamp.toIso8601String(),
+    'inputs': inputs,
+    'output': output,
+  };
 
   factory HistoryEntry.fromJson(Map<String, dynamic> json) => HistoryEntry(
-        id: json['id'] as String,
-        toolId: json['toolId'] as String,
-        timestamp: DateTime.parse(json['timestamp'] as String),
-        inputs: Map<String, String>.from(json['inputs'] as Map),
-        output: json['output'] as String,
-      );
+    id: json['id'] as String,
+    toolId: json['toolId'] as String,
+    timestamp: DateTime.parse(json['timestamp'] as String),
+    inputs: Map<String, String>.from(json['inputs'] as Map),
+    output: json['output'] as String,
+  );
 }
 
 abstract class HistoryRepository {
   Future<List<HistoryEntry>> list();
   Future<void> add(HistoryEntry entry);
+  Future<void> delete(String id);
   Future<void> clear();
 }
 
 class SharedPrefsHistoryRepository implements HistoryRepository {
   static const _key = 'history';
-  static const _maxItems = 50;
+  static const _maxItems = 75;
 
   @override
   Future<void> add(HistoryEntry entry) async {
     final prefs = await SharedPreferences.getInstance();
     final all = await list();
     all.insert(0, entry);
+
     final trimmed = all.take(_maxItems).map((e) => jsonEncode(e.toJson())).toList();
     await prefs.setStringList(_key, trimmed);
   }
@@ -61,10 +62,20 @@ class SharedPrefsHistoryRepository implements HistoryRepository {
   }
 
   @override
+  Future<void> delete(String id) async {
+    final prefs = await SharedPreferences.getInstance();
+    final all = await list();
+    all.removeWhere((e) => e.id == id);
+    await prefs.setStringList(_key, all.map((e) => jsonEncode(e.toJson())).toList());
+  }
+
+  @override
   Future<List<HistoryEntry>> list() async {
     final prefs = await SharedPreferences.getInstance();
-    final data = prefs.getStringList(_key) ?? [];
-    return data.map((e) => HistoryEntry.fromJson(jsonDecode(e) as Map<String, dynamic>)).toList();
+    final data = prefs.getStringList(_key) ?? <String>[];
+    return data
+        .map((e) => HistoryEntry.fromJson(jsonDecode(e) as Map<String, dynamic>))
+        .toList();
   }
 }
 
@@ -72,6 +83,6 @@ final historyRepositoryProvider = Provider<HistoryRepository>((ref) {
   return SharedPrefsHistoryRepository();
 });
 
-final historyProvider = FutureProvider<List<HistoryEntry>>((ref) {
+final historyProvider = FutureProvider<List<HistoryEntry>>((ref) async {
   return ref.watch(historyRepositoryProvider).list();
 });

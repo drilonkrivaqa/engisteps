@@ -1,6 +1,7 @@
 name: engisteps
 description: EngiSteps - engineering toolkit for students and professors.
 publish_to: 'none'
+
 version: 1.0.0+1
 
 environment:

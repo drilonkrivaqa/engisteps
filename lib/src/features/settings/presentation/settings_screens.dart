@@ -1,62 +1,79 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../core/widgets/app_scaffold.dart';
 import '../../../core/widgets/section_card.dart';
-import '../../settings/data/settings_repository.dart';
+import '../data/settings_repository.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final s = ref.watch(settingsControllerProvider);
-    final c = ref.read(settingsControllerProvider.notifier);
+    final settings = ref.watch(settingsControllerProvider);
+    final controller = ref.read(settingsControllerProvider.notifier);
 
     return AppScaffold(
       title: 'Settings',
       body: ListView(
         children: [
           SectionCard(
-            title: 'Preferences',
+            title: 'Appearance',
             child: Column(
               children: [
                 SwitchListTile(
-                  value: s.darkMode,
+                  contentPadding: EdgeInsets.zero,
+                  value: settings.darkMode,
+                  onChanged: controller.setDarkMode,
                   title: const Text('Dark mode'),
-                  onChanged: c.setDarkMode,
-                ),
-                SwitchListTile(
-                  value: s.professorMode,
-                  title: const Text('Professor Mode'),
-                  subtitle: const Text('Enable classroom templates and sharing.'),
-                  onChanged: c.setProfessorMode,
                 ),
               ],
             ),
           ),
-          ...[
-            ('Account', '/settings/account'),
-            ('Preferences details', '/settings/preferences'),
-            ('Units', '/settings/units'),
-            ('Offline', '/settings/offline'),
-            ('About', '/settings/about'),
-            ('Legal', '/settings/legal'),
-            ('Feedback', '/settings/feedback'),
-          ].map(
-            (item) => ListTile(
-              title: Text(item.$1),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => context.push(item.$2),
+          const SizedBox(height: 12),
+          SectionCard(
+            title: 'Computation',
+            subtitle: 'Control how results are displayed.',
+            child: Column(
+              children: [
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  value: settings.scientificNotation,
+                  onChanged: controller.setScientificNotation,
+                  title: const Text('Scientific notation'),
+                ),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<int>(
+                  value: settings.decimalPrecision,
+                  decoration: const InputDecoration(
+                    labelText: 'Decimal precision',
+                    prefixIcon: Icon(Icons.format_list_numbered),
+                  ),
+                  items: const [0, 1, 2, 3, 4, 5, 6]
+                      .map((p) => DropdownMenuItem(value: p, child: Text('$p')))
+                      .toList(),
+                  onChanged: (v) => controller.setPrecision(v ?? 4),
+                ),
+              ],
             ),
           ),
-          if (s.professorMode)
-            ListTile(
-              title: const Text('Classroom'),
-              trailing: const Icon(Icons.school_outlined),
-              onTap: () => context.push('/classroom/dashboard'),
+          const SizedBox(height: 12),
+          SectionCard(
+            title: 'Mode',
+            subtitle: 'Professor mode unlocks Classroom features.',
+            child: SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              value: settings.professorMode,
+              onChanged: controller.setProfessorMode,
+              title: const Text('Professor mode'),
             ),
+          ),
+          const SizedBox(height: 12),
+          const SectionCard(
+            title: 'About',
+            subtitle: 'EngiSteps is offline-first and fast.',
+            child: Text('Next: add more tools + export/share templates.'),
+          ),
         ],
       ),
     );
@@ -66,73 +83,62 @@ class SettingsScreen extends ConsumerWidget {
 class AccountScreen extends StatelessWidget {
   const AccountScreen({super.key});
   @override
-  Widget build(BuildContext context) =>
-      const AppScaffold(title: 'Account', body: Text('Guest profile data stub.'));
+  Widget build(BuildContext context) => const AppScaffold(
+    title: 'Account',
+    body: SectionCard(title: 'Account', child: Text('Account system not implemented (offline app).')),
+  );
 }
 
-class PreferencesScreen extends ConsumerWidget {
+class PreferencesScreen extends StatelessWidget {
   const PreferencesScreen({super.key});
-
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final s = ref.watch(settingsControllerProvider);
-    final c = ref.read(settingsControllerProvider.notifier);
-    return AppScaffold(
-      title: 'Preferences',
-      body: ListView(
-        children: [
-          const ListTile(title: Text('Language'), subtitle: Text('Placeholder')),
-          ListTile(title: Text('Decimal precision: ${s.decimalPrecision}')),
-          Slider(
-            value: s.decimalPrecision.toDouble(),
-            min: 1,
-            max: 10,
-            divisions: 9,
-            label: '${s.decimalPrecision}',
-            onChanged: (v) => c.setPrecision(v.round()),
-          ),
-          SwitchListTile(
-            value: s.scientificNotation,
-            title: const Text('Scientific notation'),
-            onChanged: c.setScientificNotation,
-          )
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => const AppScaffold(
+    title: 'Preferences',
+    body: SectionCard(title: 'Preferences', child: Text('Add preferences here later.')),
+  );
 }
 
 class UnitsScreen extends StatelessWidget {
   const UnitsScreen({super.key});
   @override
   Widget build(BuildContext context) => const AppScaffold(
-      title: 'Units', body: Text('SI/Imperial defaults placeholder.'));
+    title: 'Units',
+    body: SectionCard(title: 'Units', child: Text('Unit conversion engine can be added next.')),
+  );
 }
 
 class OfflineScreen extends StatelessWidget {
   const OfflineScreen({super.key});
   @override
   Widget build(BuildContext context) => const AppScaffold(
-      title: 'Offline', body: Text('Download packs and storage usage placeholder.'));
+    title: 'Offline',
+    body: SectionCard(title: 'Offline', child: Text('EngiSteps already works offline.')),
+  );
 }
 
 class AboutScreen extends StatelessWidget {
   const AboutScreen({super.key});
   @override
-  Widget build(BuildContext context) =>
-      const AppScaffold(title: 'About', body: Text('EngiSteps v1.0.0'));
+  Widget build(BuildContext context) => const AppScaffold(
+    title: 'About',
+    body: SectionCard(title: 'About EngiSteps', child: Text('Engineering toolkit for students & professors.')),
+  );
 }
 
 class LegalScreen extends StatelessWidget {
   const LegalScreen({super.key});
   @override
-  Widget build(BuildContext context) =>
-      const AppScaffold(title: 'Legal', body: Text('Legal placeholder.'));
+  Widget build(BuildContext context) => const AppScaffold(
+    title: 'Legal',
+    body: SectionCard(title: 'Legal', child: Text('Add licenses and disclaimers here.')),
+  );
 }
 
 class FeedbackScreen extends StatelessWidget {
   const FeedbackScreen({super.key});
   @override
-  Widget build(BuildContext context) =>
-      const AppScaffold(title: 'Feedback', body: Text('Feedback stub.'));
+  Widget build(BuildContext context) => const AppScaffold(
+    title: 'Feedback',
+    body: SectionCard(title: 'Feedback', child: Text('Add email/issue link later.')),
+  );
 }

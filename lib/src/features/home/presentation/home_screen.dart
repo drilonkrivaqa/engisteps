@@ -12,7 +12,7 @@ import '../../tools/domain/tool_registry.dart';
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
-  static const _categoryIcons = {
+  static const _categoryIcons = <String, IconData>{
     'Circuits': Icons.bolt,
     'Electronics': Icons.memory,
     'Signals': Icons.multiline_chart,
@@ -27,23 +27,54 @@ class HomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final history = ref.watch(historyProvider);
     final favorites = ref.watch(favoritesProvider);
-    final categories = ToolRegistry.tools.map((e) => e.category).toSet().toList()..sort();
+
+    final categories = ToolRegistry.categories();
     final countsByCategory = <String, int>{
-      for (final category in categories) category: ToolRegistry.tools.where((tool) => tool.category == category).length,
+      for (final c in categories) c: ToolRegistry.tools.where((t) => t.category == c).length,
     };
 
     return AppScaffold(
-      title: 'Home',
+      title: 'EngiSteps',
+      actions: [
+        IconButton(
+          tooltip: 'Search',
+          onPressed: () => context.push('/search'),
+          icon: const Icon(Icons.search),
+        ),
+        IconButton(
+          tooltip: 'History',
+          onPressed: () => context.push('/history'),
+          icon: const Icon(Icons.history),
+        ),
+      ],
       body: ListView(
         children: [
-          SearchBar(
-            hintText: 'Search tools...',
-            onTap: () => context.push('/search'),
-            enabled: true,
-            readOnly: true,
-            leading: const Icon(Icons.search),
+          SectionCard(
+            title: 'Quick actions',
+            subtitle: 'What do you want to do right now?',
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                FilledButton.icon(
+                  onPressed: () => context.push('/tools'),
+                  icon: const Icon(Icons.calculate_outlined),
+                  label: const Text('Browse tools'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () => context.push('/search'),
+                  icon: const Icon(Icons.search),
+                  label: const Text('Search'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () => context.push('/favorites'),
+                  icon: const Icon(Icons.favorite_border),
+                  label: const Text('Favorites'),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           SectionCard(
             title: 'Categories',
             child: GridView.builder(
@@ -52,23 +83,24 @@ class HomeScreen extends ConsumerWidget {
               itemCount: categories.length,
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
-                crossAxisSpacing: 8,
-                mainAxisSpacing: 8,
+                crossAxisSpacing: 10,
+                mainAxisSpacing: 10,
                 childAspectRatio: 2.6,
               ),
               itemBuilder: (context, index) {
                 final category = categories[index];
                 final icon = _categoryIcons[category] ?? Icons.category;
+
                 return InkWell(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(16),
                   onTap: () => context.push('/tools/category/$category'),
                   child: Card(
                     margin: EdgeInsets.zero,
                     child: Padding(
-                      padding: const EdgeInsets.all(10),
+                      padding: const EdgeInsets.all(12),
                       child: Row(
                         children: [
-                          Icon(icon),
+                          CircleAvatar(child: Icon(icon)),
                           const SizedBox(width: 10),
                           Expanded(
                             child: Column(
@@ -94,41 +126,23 @@ class HomeScreen extends ConsumerWidget {
             child: history.when(
               data: (items) {
                 if (items.isEmpty) {
-                  return const EmptyState(title: 'Nothing to continue', message: 'Run a tool once and it appears here.');
+                  return const EmptyState(
+                    title: 'Nothing to continue',
+                    message: 'Run a tool once and it appears here.',
+                    icon: Icons.play_circle_outline,
+                  );
                 }
+
                 final latest = items.first;
                 final tool = ToolRegistry.byId(latest.toolId);
+
                 return ListTile(
                   contentPadding: EdgeInsets.zero,
+                  leading: const CircleAvatar(child: Icon(Icons.play_arrow_rounded)),
                   title: Text(tool.title),
                   subtitle: Text('Last result: ${latest.output}'),
-                  trailing: const Icon(Icons.play_arrow_rounded),
+                  trailing: const Icon(Icons.chevron_right),
                   onTap: () => context.push('/tool/${tool.id}'),
-                );
-              },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Text('Error: $e'),
-            ),
-          ),
-          const SizedBox(height: 12),
-          SectionCard(
-            title: 'Recents',
-            child: history.when(
-              data: (items) {
-                if (items.isEmpty) {
-                  return const EmptyState(title: 'No recent tools', message: 'Your computations will appear here.');
-                }
-                return Column(
-                  children: items.take(5).map((entry) {
-                    final tool = ToolRegistry.byId(entry.toolId);
-                    return ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(tool.title),
-                      subtitle: Text(entry.output),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () => context.push('/tool/${tool.id}'),
-                    );
-                  }).toList(),
                 );
               },
               loading: () => const Center(child: CircularProgressIndicator()),
@@ -141,16 +155,23 @@ class HomeScreen extends ConsumerWidget {
             child: favorites.when(
               data: (ids) {
                 if (ids.isEmpty) {
-                  return const EmptyState(title: 'No favorites yet', message: 'Save tools to access them faster.');
+                  return const EmptyState(
+                    title: 'No favorites yet',
+                    message: 'Save tools you use a lot.',
+                    icon: Icons.favorite_border,
+                  );
                 }
-                final tools = ToolRegistry.tools.where((t) => ids.contains(t.id)).toList();
+
+                final tools = ToolRegistry.tools.where((t) => ids.contains(t.id)).toList()
+                  ..sort((a, b) => b.popularity.compareTo(a.popularity));
+
                 return Column(
-                  children: tools.take(5).map((tool) {
+                  children: tools.take(6).map((tool) {
                     return ListTile(
                       contentPadding: EdgeInsets.zero,
                       title: Text(tool.title),
                       subtitle: Text(tool.category),
-                      trailing: const Icon(Icons.favorite, color: Colors.redAccent),
+                      trailing: const Icon(Icons.chevron_right),
                       onTap: () => context.push('/tool/${tool.id}'),
                     );
                   }).toList(),
@@ -160,6 +181,7 @@ class HomeScreen extends ConsumerWidget {
               error: (e, _) => Text('Error: $e'),
             ),
           ),
+          const SizedBox(height: 80),
         ],
       ),
     );

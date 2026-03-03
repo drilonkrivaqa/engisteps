@@ -1,12 +1,16 @@
+typedef ToolCompute = ToolResult Function(Map<String, double> inputs);
+
 class ToolInputSchema {
   const ToolInputSchema({
     required this.key,
     required this.label,
     this.hint,
     this.defaultValue,
-    this.unitOptions = const [],
+    this.unitOptions = const <String>[],
     this.isAdvanced = false,
     this.required = true,
+    this.min,
+    this.max,
   });
 
   final String key;
@@ -16,6 +20,8 @@ class ToolInputSchema {
   final List<String> unitOptions;
   final bool isAdvanced;
   final bool required;
+  final double? min;
+  final double? max;
 }
 
 class ToolPreset {
@@ -31,8 +37,8 @@ class ToolPreset {
 class ToolResult {
   const ToolResult({
     required this.mainResult,
-    this.secondaryResults = const [],
-    this.steps = const [],
+    this.secondaryResults = const <MapEntry<String, String>>[],
+    this.steps = const <String>[],
     this.error,
   });
 
@@ -41,8 +47,6 @@ class ToolResult {
   final List<String> steps;
   final String? error;
 }
-
-typedef ToolCompute = ToolResult Function(Map<String, double> inputs);
 
 class Tool {
   const Tool({
@@ -53,10 +57,11 @@ class Tool {
     required this.description,
     required this.inputs,
     required this.compute,
+    this.tags = const <String>[],
     this.isCore = false,
     this.hasGraph = false,
     this.popularity = 0,
-    this.presets = const [],
+    this.presets = const <ToolPreset>[],
   });
 
   final String id;
@@ -64,8 +69,11 @@ class Tool {
   final String category;
   final String subcategory;
   final String description;
+  final List<String> tags;
+
   final List<ToolInputSchema> inputs;
   final ToolCompute compute;
+
   final bool isCore;
   final bool hasGraph;
   final int popularity;
