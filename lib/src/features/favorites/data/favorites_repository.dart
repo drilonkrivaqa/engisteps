@@ -1,109 +1,41 @@
-import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class FavoritePreset {
-  const FavoritePreset({
-    required this.id,
-    required this.toolId,
-    required this.name,
-    required this.values,
-  });
-
-  final String id;
-  final String toolId;
-  final String name;
-  final Map<String, String> values;
-
-  Map<String, dynamic> toJson() => {
-    'id': id,
-    'toolId': toolId,
-    'name': name,
-    'values': values,
-  };
-
-  factory FavoritePreset.fromJson(Map<String, dynamic> json) => FavoritePreset(
-    id: json['id'] as String,
-    toolId: json['toolId'] as String,
-    name: json['name'] as String,
-    values: Map<String, String>.from(json['values'] as Map),
-  );
-}
-
-abstract class FavoritesRepository {
-  Future<List<String>> getFavorites();
-  Future<void> toggleFavorite(String toolId);
-  Future<bool> isFavorite(String toolId);
-
-  Future<List<FavoritePreset>> getPresets();
-  Future<void> savePreset(FavoritePreset preset);
-  Future<void> deletePreset(String presetId);
-}
-
-class SharedPrefsFavoritesRepository implements FavoritesRepository {
-  static const _key = 'favorites';
-  static const _presetKey = 'favorite_presets';
-
-  @override
-  Future<List<String>> getFavorites() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getStringList(_key) ?? <String>[];
+class FavoritesController extends StateNotifier<List<String>> {
+  FavoritesController() : super(const []) {
+    load();
   }
 
-  @override
-  Future<bool> isFavorite(String toolId) async {
-    final current = await getFavorites();
-    return current.contains(toolId);
+  static const _key = 'favorites_ordered';
+
+  Future<void> load() async {
+    final prefs = await SharedPreferences.getInstance();
+    state = prefs.getStringList(_key) ?? <String>[];
   }
 
-  @override
-  Future<List<FavoritePreset>> getPresets() async {
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getStringList(_presetKey) ?? <String>[];
-    return raw
-        .map((e) => FavoritePreset.fromJson(jsonDecode(e) as Map<String, dynamic>))
-        .toList();
-  }
-
-  @override
-  Future<void> savePreset(FavoritePreset preset) async {
-    final prefs = await SharedPreferences.getInstance();
-    final current = await getPresets();
-    current.insert(0, preset);
-    await prefs.setStringList(_presetKey, current.map((e) => jsonEncode(e.toJson())).toList());
-  }
-
-  @override
-  Future<void> deletePreset(String presetId) async {
-    final prefs = await SharedPreferences.getInstance();
-    final current = await getPresets();
-    current.removeWhere((p) => p.id == presetId);
-    await prefs.setStringList(_presetKey, current.map((e) => jsonEncode(e.toJson())).toList());
-  }
-
-  @override
-  Future<void> toggleFavorite(String toolId) async {
-    final prefs = await SharedPreferences.getInstance();
-    final current = prefs.getStringList(_key) ?? <String>[];
-
-    if (current.contains(toolId)) {
-      current.remove(toolId);
+  Future<void> toggle(String toolId) async {
+    final next = [...state];
+    if (next.contains(toolId)) {
+      next.remove(toolId);
     } else {
-      current.add(toolId);
+      next.insert(0, toolId);
     }
+    state = next;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(_key, next);
+  }
 
-    await prefs.setStringList(_key, current);
+  Future<void> reorder(int oldIndex, int newIndex) async {
+    final next = [...state];
+    if (newIndex > oldIndex) newIndex -= 1;
+    final item = next.removeAt(oldIndex);
+    next.insert(newIndex, item);
+    state = next;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(_key, next);
   }
 }
 
-final favoritesRepositoryProvider = Provider<FavoritesRepository>((ref) {
-  return SharedPrefsFavoritesRepository();
-});
-
-final favoritesProvider = FutureProvider<List<String>>((ref) async {
-  return ref.watch(favoritesRepositoryProvider).getFavorites();
-});
-
-final favoritePresetsProvider = FutureProvider<List<FavoritePreset>>((ref) async {
-  return ref.watch(favoritesRepositoryProvider).getPresets();
+final favoritesProvider = StateNotifierProvider<FavoritesController, List<String>>((ref) {
+  return FavoritesController();
 });

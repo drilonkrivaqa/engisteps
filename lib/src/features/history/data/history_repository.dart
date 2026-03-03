@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -18,71 +19,53 @@ class HistoryEntry {
   final String output;
 
   Map<String, dynamic> toJson() => {
-    'id': id,
-    'toolId': toolId,
-    'timestamp': timestamp.toIso8601String(),
-    'inputs': inputs,
-    'output': output,
-  };
+        'id': id,
+        'toolId': toolId,
+        'timestamp': timestamp.toIso8601String(),
+        'inputs': inputs,
+        'output': output,
+      };
 
   factory HistoryEntry.fromJson(Map<String, dynamic> json) => HistoryEntry(
-    id: json['id'] as String,
-    toolId: json['toolId'] as String,
-    timestamp: DateTime.parse(json['timestamp'] as String),
-    inputs: Map<String, String>.from(json['inputs'] as Map),
-    output: json['output'] as String,
-  );
+        id: json['id'] as String,
+        toolId: json['toolId'] as String,
+        timestamp: DateTime.parse(json['timestamp'] as String),
+        inputs: Map<String, String>.from(json['inputs'] as Map),
+        output: json['output'] as String,
+      );
 }
 
-abstract class HistoryRepository {
-  Future<List<HistoryEntry>> list();
-  Future<void> add(HistoryEntry entry);
-  Future<void> delete(String id);
-  Future<void> clear();
-}
-
-class SharedPrefsHistoryRepository implements HistoryRepository {
-  static const _key = 'history';
-  static const _maxItems = 75;
-
-  @override
-  Future<void> add(HistoryEntry entry) async {
-    final prefs = await SharedPreferences.getInstance();
-    final all = await list();
-    all.insert(0, entry);
-
-    final trimmed = all.take(_maxItems).map((e) => jsonEncode(e.toJson())).toList();
-    await prefs.setStringList(_key, trimmed);
+class HistoryController extends StateNotifier<List<HistoryEntry>> {
+  HistoryController() : super(const []) {
+    load();
   }
 
-  @override
+  static const _key = 'history_entries';
+
+  Future<void> load() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getStringList(_key) ?? <String>[];
+    state = raw.map((e) => HistoryEntry.fromJson(jsonDecode(e) as Map<String, dynamic>)).toList();
+  }
+
+  Future<void> add(HistoryEntry entry) async {
+    final next = [entry, ...state].take(200).toList();
+    state = next;
+    await _save(next);
+  }
+
   Future<void> clear() async {
+    state = [];
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_key);
   }
 
-  @override
-  Future<void> delete(String id) async {
+  Future<void> _save(List<HistoryEntry> values) async {
     final prefs = await SharedPreferences.getInstance();
-    final all = await list();
-    all.removeWhere((e) => e.id == id);
-    await prefs.setStringList(_key, all.map((e) => jsonEncode(e.toJson())).toList());
-  }
-
-  @override
-  Future<List<HistoryEntry>> list() async {
-    final prefs = await SharedPreferences.getInstance();
-    final data = prefs.getStringList(_key) ?? <String>[];
-    return data
-        .map((e) => HistoryEntry.fromJson(jsonDecode(e) as Map<String, dynamic>))
-        .toList();
+    await prefs.setStringList(_key, values.map((e) => jsonEncode(e.toJson())).toList());
   }
 }
 
-final historyRepositoryProvider = Provider<HistoryRepository>((ref) {
-  return SharedPrefsHistoryRepository();
-});
-
-final historyProvider = FutureProvider<List<HistoryEntry>>((ref) async {
-  return ref.watch(historyRepositoryProvider).list();
+final historyProvider = StateNotifierProvider<HistoryController, List<HistoryEntry>>((ref) {
+  return HistoryController();
 });
