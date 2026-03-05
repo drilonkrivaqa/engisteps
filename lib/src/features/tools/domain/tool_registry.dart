@@ -433,6 +433,96 @@ class ToolRegistry {
         ],
       ),
     ),
+
+    Tool(
+      id: 'beam_bending_stress',
+      title: 'Beam Bending Stress',
+      category: 'Mechanics',
+      description: 'Compute maximum bending stress using σ = Mc/I.',
+      tags: ['beam', 'stress', 'mechanics of materials'],
+      inputs: const [
+        ToolInputSchema(key: 'M', label: 'Moment M', defaultValue: '1200', unit: 'N·m'),
+        ToolInputSchema(key: 'c', label: 'Distance c', defaultValue: '0.05', unit: 'm'),
+        ToolInputSchema(key: 'I', label: 'Second moment I', defaultValue: '0.000008', unit: 'm⁴'),
+      ],
+      compute: (m) {
+        final stress = m['M']! * m['c']! / m['I']!;
+        return ToolResult(mainResult: 'σmax=${_n(stress)} Pa', secondaryResults: [MapEntry('≈ MPa', _n(stress / 1e6))]);
+      },
+    ),
+    Tool(
+      id: 'reynolds_number',
+      title: 'Reynolds Number',
+      category: 'Fluid',
+      description: 'Flow regime indicator Re = ρVD/μ.',
+      tags: ['fluid', 'pipe', 'laminar', 'turbulent'],
+      inputs: const [
+        ToolInputSchema(key: 'rho', label: 'Density ρ', defaultValue: '1000', unit: 'kg/m³'),
+        ToolInputSchema(key: 'V', label: 'Velocity V', defaultValue: '1.5', unit: 'm/s'),
+        ToolInputSchema(key: 'D', label: 'Diameter D', defaultValue: '0.05', unit: 'm'),
+        ToolInputSchema(key: 'mu', label: 'Dynamic viscosity μ', defaultValue: '0.001', unit: 'Pa·s'),
+      ],
+      compute: (m) {
+        final re = m['rho']! * m['V']! * m['D']! / m['mu']!;
+        final regime = re < 2300 ? 'Laminar' : (re < 4000 ? 'Transition' : 'Turbulent');
+        return ToolResult(mainResult: 'Re=${_n(re)}', secondaryResults: [MapEntry('Regime', regime)]);
+      },
+    ),
+    Tool(
+      id: 'ideal_gas',
+      title: 'Ideal Gas Solver',
+      category: 'Thermo',
+      description: 'Solve pressure with P = nRT/V.',
+      tags: ['thermo', 'gas law'],
+      inputs: const [
+        ToolInputSchema(key: 'n', label: 'Moles n', defaultValue: '1'),
+        ToolInputSchema(key: 'T', label: 'Temperature T', defaultValue: '300', unit: 'K'),
+        ToolInputSchema(key: 'V', label: 'Volume V', defaultValue: '0.024', unit: 'm³'),
+      ],
+      compute: (m) {
+        const r = 8.314462618;
+        final p = m['n']! * r * m['T']! / m['V']!;
+        return ToolResult(mainResult: 'P=${_n(p)} Pa', secondaryResults: [MapEntry('kPa', _n(p / 1000))]);
+      },
+    ),
+    Tool(
+      id: 'gpa_tracker',
+      title: 'GPA / CGPA Estimator',
+      category: 'Academic',
+      description: 'Weighted GPA from previous and current semester.',
+      tags: ['gpa', 'academic', 'planner'],
+      inputs: const [
+        ToolInputSchema(key: 'prevCgpa', label: 'Previous CGPA', defaultValue: '3.2', min: 0, max: 4),
+        ToolInputSchema(key: 'prevCredits', label: 'Previous credits', defaultValue: '72', min: 0),
+        ToolInputSchema(key: 'currentGpa', label: 'Current semester GPA', defaultValue: '3.6', min: 0, max: 4),
+        ToolInputSchema(key: 'currentCredits', label: 'Current credits', defaultValue: '18', min: 1),
+      ],
+      compute: (m) {
+        final totalPts = m['prevCgpa']! * m['prevCredits']! + m['currentGpa']! * m['currentCredits']!;
+        final totalCredits = m['prevCredits']! + m['currentCredits']!;
+        final cgpa = totalPts / totalCredits;
+        return ToolResult(mainResult: 'Updated CGPA=${_n(cgpa)}', secondaryResults: [MapEntry('Total credits', _n(totalCredits))]);
+      },
+    ),
+    Tool(
+      id: 'transformer_turns_ratio',
+      title: 'Transformer Turns & Voltage Ratio',
+      category: 'Electrical',
+      description: 'Compute Vs and current ratio in ideal transformer.',
+      tags: ['transformer', 'power systems'],
+      inputs: const [
+        ToolInputSchema(key: 'Vp', label: 'Primary voltage Vp', defaultValue: '230', unit: 'V'),
+        ToolInputSchema(key: 'Np', label: 'Primary turns Np', defaultValue: '500'),
+        ToolInputSchema(key: 'Ns', label: 'Secondary turns Ns', defaultValue: '100'),
+        ToolInputSchema(key: 'Ip', label: 'Primary current Ip', defaultValue: '2', unit: 'A'),
+      ],
+      compute: (m) {
+        final ratio = m['Ns']! / m['Np']!;
+        final vs = m['Vp']! * ratio;
+        final isec = m['Ip']! / ratio;
+        return ToolResult(mainResult: 'Vs=${_n(vs)} V', secondaryResults: [MapEntry('Turns ratio Ns/Np', _n(ratio)), MapEntry('Secondary current Is', '${_n(isec)} A')]);
+      },
+    ),
   ];
 
   static Tool byId(String id) => tools.firstWhere((t) => t.id == id);
