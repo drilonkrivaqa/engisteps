@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class AppTheme {
-  static const _seed = Color(0xFF4F46E5);
+  static const _seed = Color(0xFF265DFA);
 
   static ThemeData get light {
     final base = ThemeData(
@@ -11,7 +11,7 @@ class AppTheme {
     );
 
     return base.copyWith(
-      scaffoldBackgroundColor: const Color(0xFFF6F7FB),
+      scaffoldBackgroundColor: const Color(0xFFF2F5FC),
       pageTransitionsTheme: const PageTransitionsTheme(
         builders: {
           TargetPlatform.android: ZoomPageTransitionsBuilder(),
@@ -29,9 +29,11 @@ class AppTheme {
       ),
       cardTheme: const CardThemeData(
         elevation: 0,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(18))),
+        color: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(20))),
       ),
       navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: Colors.white,
         indicatorColor: base.colorScheme.primaryContainer,
         labelTextStyle: WidgetStateProperty.resolveWith(
           (states) => TextStyle(
@@ -42,7 +44,9 @@ class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: Colors.white,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: Colors.blueGrey.withValues(alpha: 0.12))),
       ),
     );
   }
@@ -60,9 +64,10 @@ class AppTheme {
         foregroundColor: base.colorScheme.onSurface,
         elevation: 0,
       ),
-      cardTheme: const CardThemeData(
+      cardTheme: CardThemeData(
         elevation: 0,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(18))),
+        color: base.colorScheme.surfaceContainer,
+        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(20))),
       ),
       navigationBarTheme: NavigationBarThemeData(
         indicatorColor: base.colorScheme.primaryContainer,
@@ -70,7 +75,7 @@ class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: base.colorScheme.surfaceContainerHigh,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
       ),
     );
   }
