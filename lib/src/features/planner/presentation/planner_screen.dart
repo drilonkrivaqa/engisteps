@@ -375,7 +375,7 @@ class _EngineeringPlannerScreenState
             ),
           )
         else
-          ...tasks.map((task) => _taskTile(context, task)).toList(),
+          ...tasks.map((task) => _taskTile(context, task)),
         if (completed > 0)
           Align(
             alignment: Alignment.centerRight,
@@ -505,7 +505,7 @@ class _EngineeringPlannerScreenState
                 ),
                 const SizedBox(height: 10),
                 DropdownButtonFormField<double>(
-                  value: _selectedGradePoint,
+                  initialValue: _selectedGradePoint,
                   decoration: const InputDecoration(
                     labelText: 'Grade',
                     prefixIcon: Icon(Icons.grade),

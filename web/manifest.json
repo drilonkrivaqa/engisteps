@@ -1,11 +1,11 @@
 {
-    "name": "engisteps",
-    "short_name": "engisteps",
+    "name": "EngiSteps",
+    "short_name": "EngiSteps",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#F3F6F5",
+    "theme_color": "#146B70",
+    "description": "Engineering calculators, unit conversions, saved working, and study notes.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

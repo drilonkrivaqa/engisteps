@@ -25,15 +25,15 @@ class _SearchScreenState extends State<SearchScreen> {
   Widget build(BuildContext context) {
     final q = _controller.text.trim().toLowerCase();
 
-    final matches = ToolRegistry.tools
-        .where((t) {
-      if (q.isEmpty) return true;
-      return t.title.toLowerCase().contains(q) ||
-          t.category.toLowerCase().contains(q) ||
-          t.description.toLowerCase().contains(q);
-    })
-        .toList()
-      ..sort((a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()));
+    final matches =
+        ToolRegistry.tools.where((t) {
+          if (q.isEmpty) return true;
+          return t.title.toLowerCase().contains(q) ||
+              t.category.toLowerCase().contains(q) ||
+              t.description.toLowerCase().contains(q);
+        }).toList()..sort(
+          (a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()),
+        );
 
     return AppScaffold(
       title: 'Search',
@@ -55,24 +55,27 @@ class _SearchScreenState extends State<SearchScreen> {
           Expanded(
             child: matches.isEmpty
                 ? const EmptyState(
-              title: 'No results',
-              message: 'Try another keyword.',
-              icon: Icons.search_off,
-            )
+                    title: 'No results',
+                    message: 'Try another keyword.',
+                    icon: Icons.search_off,
+                  )
                 : ListView.separated(
-              itemCount: matches.length,
-              separatorBuilder: (_, __) => const Divider(height: 1),
-              itemBuilder: (context, i) {
-                final tool = matches[i];
-                return ListTile(
-                  title: Text(tool.title),
-                  subtitle: Text('${tool.category} • ${tool.description}',
-                      maxLines: 1, overflow: TextOverflow.ellipsis),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => context.push('/tool/${tool.id}'),
-                );
-              },
-            ),
+                    itemCount: matches.length,
+                    separatorBuilder: (_, _) => const Divider(height: 1),
+                    itemBuilder: (context, i) {
+                      final tool = matches[i];
+                      return ListTile(
+                        title: Text(tool.title),
+                        subtitle: Text(
+                          '${tool.category} • ${tool.description}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () => context.push('/tool/${tool.id}'),
+                      );
+                    },
+                  ),
           ),
         ],
       ),

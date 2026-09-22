@@ -44,7 +44,8 @@ class SettingsScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<int>(
-                  value: settings.decimalPrecision,
+                  key: ValueKey(settings.decimalPrecision),
+                  initialValue: settings.decimalPrecision,
                   decoration: const InputDecoration(
                     labelText: 'Decimal precision',
                     prefixIcon: Icon(Icons.format_list_numbered),
@@ -58,21 +59,13 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 12),
-          SectionCard(
-            title: 'Mode',
-            subtitle: 'Professor mode unlocks Classroom features.',
-            child: SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              value: settings.professorMode,
-              onChanged: controller.setProfessorMode,
-              title: const Text('Professor mode'),
-            ),
-          ),
-          const SizedBox(height: 12),
+
           const SectionCard(
             title: 'About',
             subtitle: 'EngiSteps is offline-first and fast.',
-            child: Text('Next: add more tools + export/share templates.'),
+            child: Text(
+              'Calculations, favorites, and notes stay on this device. No account required. Saved results keep their original display precision.',
+            ),
           ),
         ],
       ),
@@ -85,7 +78,10 @@ class AccountScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) => const AppScaffold(
     title: 'Account',
-    body: SectionCard(title: 'Account', child: Text('Account system not implemented (offline app).')),
+    body: SectionCard(
+      title: 'Account',
+      child: Text('Account system not implemented (offline app).'),
+    ),
   );
 }
 
@@ -94,7 +90,10 @@ class PreferencesScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) => const AppScaffold(
     title: 'Preferences',
-    body: SectionCard(title: 'Preferences', child: Text('Add preferences here later.')),
+    body: SectionCard(
+      title: 'Preferences',
+      child: Text('Add preferences here later.'),
+    ),
   );
 }
 
@@ -103,7 +102,10 @@ class UnitsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) => const AppScaffold(
     title: 'Units',
-    body: SectionCard(title: 'Units', child: Text('Unit conversion engine can be added next.')),
+    body: SectionCard(
+      title: 'Units',
+      child: Text('Unit conversion engine can be added next.'),
+    ),
   );
 }
 
@@ -112,7 +114,10 @@ class OfflineScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) => const AppScaffold(
     title: 'Offline',
-    body: SectionCard(title: 'Offline', child: Text('EngiSteps already works offline.')),
+    body: SectionCard(
+      title: 'Offline',
+      child: Text('EngiSteps already works offline.'),
+    ),
   );
 }
 
@@ -121,7 +126,10 @@ class AboutScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) => const AppScaffold(
     title: 'About',
-    body: SectionCard(title: 'About EngiSteps', child: Text('Engineering toolkit for students & professors.')),
+    body: SectionCard(
+      title: 'About EngiSteps',
+      child: Text('Engineering toolkit for students & professors.'),
+    ),
   );
 }
 
@@ -130,7 +138,10 @@ class LegalScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) => const AppScaffold(
     title: 'Legal',
-    body: SectionCard(title: 'Legal', child: Text('Add licenses and disclaimers here.')),
+    body: SectionCard(
+      title: 'Legal',
+      child: Text('Add licenses and disclaimers here.'),
+    ),
   );
 }
 
@@ -139,6 +150,9 @@ class FeedbackScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) => const AppScaffold(
     title: 'Feedback',
-    body: SectionCard(title: 'Feedback', child: Text('Add email/issue link later.')),
+    body: SectionCard(
+      title: 'Feedback',
+      child: Text('Add email/issue link later.'),
+    ),
   );
 }

@@ -35,43 +35,50 @@ class AppSettings {
 
 class SettingsController extends StateNotifier<AppSettings> {
   SettingsController() : super(const AppSettings()) {
-    _load();
+    _ready = _load();
   }
 
   static const _kDarkMode = 'dark_mode';
   static const _kProfessorMode = 'professor_mode';
   static const _kPrecision = 'precision';
   static const _kSci = 'sci';
+  late final Future<void> _ready;
 
   Future<void> _load() async {
     final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
     state = AppSettings(
       darkMode: prefs.getBool(_kDarkMode) ?? false,
       professorMode: prefs.getBool(_kProfessorMode) ?? false,
-      decimalPrecision: prefs.getInt(_kPrecision) ?? 4,
+      decimalPrecision: (prefs.getInt(_kPrecision) ?? 4).clamp(0, 6),
       scientificNotation: prefs.getBool(_kSci) ?? false,
     );
   }
 
   Future<void> setDarkMode(bool v) async {
+    await _ready;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_kDarkMode, v);
     state = state.copyWith(darkMode: v);
   }
 
   Future<void> setProfessorMode(bool v) async {
+    await _ready;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_kProfessorMode, v);
     state = state.copyWith(professorMode: v);
   }
 
   Future<void> setPrecision(int v) async {
+    await _ready;
+    v = v.clamp(0, 6);
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(_kPrecision, v);
     state = state.copyWith(decimalPrecision: v);
   }
 
   Future<void> setScientificNotation(bool v) async {
+    await _ready;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_kSci, v);
     state = state.copyWith(scientificNotation: v);
@@ -79,6 +86,6 @@ class SettingsController extends StateNotifier<AppSettings> {
 }
 
 final settingsControllerProvider =
-StateNotifierProvider<SettingsController, AppSettings>((ref) {
-  return SettingsController();
-});
+    StateNotifierProvider<SettingsController, AppSettings>((ref) {
+      return SettingsController();
+    });

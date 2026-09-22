@@ -22,12 +22,15 @@ class SmartNumberParser {
         .replaceAll(',', '.')
         .replaceAll('x', '*')
         .replaceAll('X', '*')
-        .replaceAll('×', '*')
-        .replaceAll('÷', '/');
+        .replaceAll('Ã—', '*')
+        .replaceAll('Ã·', '/');
 
     // Common shorthand: 2pi => 2*pi, 2(3+4) => 2*(3+4)
     source = source
-        .replaceAllMapped(RegExp(r'(\d)(pi)', caseSensitive: false), (m) => '${m.group(1)}*${m.group(2)}')
+        .replaceAllMapped(
+          RegExp(r'(\d)(pi)', caseSensitive: false),
+          (m) => '${m.group(1)}*${m.group(2)}',
+        )
         .replaceAllMapped(RegExp(r'(\d)\('), (m) => '${m.group(1)}*(')
         .replaceAllMapped(RegExp(r'\)(\d)'), (m) => ')*${m.group(1)}');
 
@@ -75,12 +78,12 @@ class _ExpressionParser {
   }
 
   double _parseTerm() {
-    var value = _parsePower();
+    var value = _parseUnary();
     while (!_isAtEnd) {
       if (_match('*')) {
-        value *= _parsePower();
+        value *= _parseUnary();
       } else if (_match('/')) {
-        value /= _parsePower();
+        value /= _parseUnary();
       } else {
         break;
       }
@@ -89,9 +92,9 @@ class _ExpressionParser {
   }
 
   double _parsePower() {
-    var left = _parseUnary();
+    var left = _parsePrimary();
     if (_match('^')) {
-      final right = _parsePower();
+      final right = _parseUnary();
       left = math.pow(left, right).toDouble();
     }
     return left;
@@ -104,7 +107,7 @@ class _ExpressionParser {
     if (_match('-')) {
       return -_parseUnary();
     }
-    return _parsePrimary();
+    return _parsePower();
   }
 
   double _parsePrimary() {
@@ -164,10 +167,12 @@ class _ExpressionParser {
       return null;
     }
 
-    if (_index < _source.length && (_source[_index] == 'e' || _source[_index] == 'E')) {
+    if (_index < _source.length &&
+        (_source[_index] == 'e' || _source[_index] == 'E')) {
       final expStart = _index;
       _index++;
-      if (_index < _source.length && (_source[_index] == '+' || _source[_index] == '-')) {
+      if (_index < _source.length &&
+          (_source[_index] == '+' || _source[_index] == '-')) {
         _index++;
       }
 
@@ -223,7 +228,8 @@ class _ExpressionParser {
         return 1e-3;
       case 'u':
       case 'U':
-      case 'µ':
+      case 'Âµ':
+      case 'Î¼':
         _index++;
         return 1e-6;
       case 'n':

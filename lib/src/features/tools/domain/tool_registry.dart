@@ -1,6 +1,8 @@
 import 'dart:math' as math;
+import 'dart:async';
 
 import '../../../core/models/tool.dart';
+import 'unit_conversion.dart';
 
 class ToolRegistry {
   static final List<Tool> tools = <Tool>[
@@ -9,7 +11,8 @@ class ToolRegistry {
       title: 'Quadratic Solver',
       category: 'Math',
       description: 'Solve ax² + bx + c = 0 with real/complex roots.',
-      explain: 'Useful in algebra, signals, and control problems where characteristic equations appear.',
+      explain:
+          'Useful in algebra, signals, and control problems where characteristic equations appear.',
       inputs: const [
         ToolInputSchema(key: 'a', label: 'a', defaultValue: '1'),
         ToolInputSchema(key: 'b', label: 'b', defaultValue: '-3'),
@@ -19,28 +22,39 @@ class ToolRegistry {
         final a = m['a']!;
         final b = m['b']!;
         final c = m['c']!;
-        if (a == 0) return const ToolResult(mainResult: 'a must be non-zero', error: 'Invalid input');
+        if (a == 0) {
+          return const ToolResult(
+            mainResult: 'a must be non-zero',
+            error: 'Invalid input',
+          );
+        }
         final d = b * b - 4 * a * c;
         final denom = 2 * a;
         if (d >= 0) {
-          final x1 = (-b + math.sqrt(d)) / denom;
-          final x2 = (-b - math.sqrt(d)) / denom;
+          // Avoid catastrophic cancellation when b dwarfs the other terms.
+          final q = -0.5 * (b + (b >= 0 ? math.sqrt(d) : -math.sqrt(d)));
+          final x1 = q == 0 ? -b / denom : q / a;
+          final x2 = q == 0 ? x1 : c / q;
           return ToolResult(
             mainResult: 'x₁=${_n(x1)}, x₂=${_n(x2)}',
             secondaryResults: [MapEntry('Discriminant', _n(d))],
             steps: [
               'Compute discriminant: Δ = b² - 4ac = ${_n(d)}',
               'Use x = (-b ± √Δ)/(2a)',
-              'x₁=${_n(x1)}, x₂=${_n(x2)}'
+              'x₁=${_n(x1)}, x₂=${_n(x2)}',
             ],
           );
         }
         final real = -b / denom;
-        final imag = math.sqrt(-d) / denom;
+        final imag = math.sqrt(-d) / denom.abs();
         return ToolResult(
-          mainResult: 'x₁=${_n(real)} + ${_n(imag)}i, x₂=${_n(real)} - ${_n(imag)}i',
+          mainResult:
+              'x₁=${_n(real)} + ${_n(imag)}i, x₂=${_n(real)} - ${_n(imag)}i',
           secondaryResults: [MapEntry('Discriminant', _n(d))],
-          steps: ['Δ < 0, so roots are complex.', 'Real part = -b/(2a), Imaginary part = √(-Δ)/(2a)'],
+          steps: [
+            'Δ < 0, so roots are complex.',
+            'Real part = -b/(2a), Imaginary part = √(-Δ)/(2a)',
+          ],
         );
       },
     ),
@@ -62,7 +76,10 @@ class ToolRegistry {
         if (det == 0) return const ToolResult(mainResult: 'No unique solution');
         final x = (m['c1']! * m['b2']! - m['c2']! * m['b1']!) / det;
         final y = (m['a1']! * m['c2']! - m['a2']! * m['c1']!) / det;
-        return ToolResult(mainResult: 'x=${_n(x)}, y=${_n(y)}', steps: ['Use Cramer determinant D=${_n(det)}']);
+        return ToolResult(
+          mainResult: 'x=${_n(x)}, y=${_n(y)}',
+          steps: ['Use Cramer determinant D=${_n(det)}'],
+        );
       },
     ),
     Tool(
@@ -82,10 +99,14 @@ class ToolRegistry {
         ToolInputSchema(key: 'i', label: 'i', defaultValue: '0'),
       ],
       compute: (m) {
-        final det = m['a']! * (m['e']! * m['i']! - m['f']! * m['h']!) -
+        final det =
+            m['a']! * (m['e']! * m['i']! - m['f']! * m['h']!) -
             m['b']! * (m['d']! * m['i']! - m['f']! * m['g']!) +
             m['c']! * (m['d']! * m['h']! - m['e']! * m['g']!);
-        return ToolResult(mainResult: 'det=${_n(det)}', steps: ['Expand along first row.']);
+        return ToolResult(
+          mainResult: 'det=${_n(det)}',
+          steps: ['Expand along first row.'],
+        );
       },
     ),
     Tool(
@@ -117,15 +138,19 @@ class ToolRegistry {
             MapEntry('z1/z2', '${_n(divR)} + ${_n(divI)}i'),
             MapEntry('z1 polar', 'r=${_n(r)}, θ=${_n(th)}°'),
           ],
-          steps: ['Multiply with distributive rule.', 'Divide using conjugate denominator.', 'Polar: r=√(a²+b²), θ=atan2(b,a).'],
+          steps: [
+            'Multiply with distributive rule.',
+            'Divide using conjugate denominator.',
+            'Polar: r=√(a²+b²), θ=atan2(b,a).',
+          ],
         );
       },
     ),
     Tool(
       id: 'numeric_derivative',
-      title: 'Derivative (Polynomial + Numeric)',
+      title: 'Polynomial Derivative',
       category: 'Math',
-      description: 'For f(x)=ax²+bx+c, compute f’(x) and numeric slope.',
+      description: 'For f(x)=ax²+bx+c, compute the exact slope f’(x).',
       inputs: const [
         ToolInputSchema(key: 'a', label: 'a', defaultValue: '1'),
         ToolInputSchema(key: 'b', label: 'b', defaultValue: '0'),
@@ -160,7 +185,10 @@ class ToolRegistry {
         final trap = (x1 - x0) * (f(x0) + f(x1)) / 2;
         final xm = (x0 + x1) / 2;
         final simpson = (x1 - x0) * (f(x0) + 4 * f(xm) + f(x1)) / 6;
-        return ToolResult(mainResult: 'Trapezoid=${_n(trap)}', secondaryResults: [MapEntry('Simpson', _n(simpson))]);
+        return ToolResult(
+          mainResult: 'Trapezoid=${_n(trap)}',
+          secondaryResults: [MapEntry('Simpson', _n(simpson))],
+        );
       },
     ),
     Tool(
@@ -176,7 +204,11 @@ class ToolRegistry {
       compute: (m) {
         final v = m['u']! + m['a']! * m['t']!;
         final s = m['u']! * m['t']! + 0.5 * m['a']! * m['t']! * m['t']!;
-        return ToolResult(mainResult: 'v=${_n(v)} m/s', secondaryResults: [MapEntry('s', '${_n(s)} m')], steps: ['v=u+at', 's=ut+½at²']);
+        return ToolResult(
+          mainResult: 'v=${_n(v)} m/s',
+          secondaryResults: [MapEntry('s', '${_n(s)} m')],
+          steps: ['v=u+at', 's=ut+½at²'],
+        );
       },
     ),
     Tool(
@@ -185,8 +217,21 @@ class ToolRegistry {
       category: 'Physics',
       description: 'Range, flight time, and max height.',
       inputs: const [
-        ToolInputSchema(key: 'v0', label: 'v0', defaultValue: '20', unit: 'm/s', examples: ['10', '20', '50'], min: 0),
-        ToolInputSchema(key: 'theta', label: 'θ', type: ToolInputType.angle, defaultValue: '45', examples: ['30', '45', '60']),
+        ToolInputSchema(
+          key: 'v0',
+          label: 'v0',
+          defaultValue: '20',
+          unit: 'm/s',
+          examples: ['10', '20', '50'],
+          min: 0,
+        ),
+        ToolInputSchema(
+          key: 'theta',
+          label: 'θ',
+          type: ToolInputType.angle,
+          defaultValue: '45',
+          examples: ['30', '45', '60'],
+        ),
       ],
       compute: (m) {
         const g = 9.81;
@@ -194,7 +239,13 @@ class ToolRegistry {
         final time = 2 * m['v0']! * math.sin(t) / g;
         final range = m['v0']! * m['v0']! * math.sin(2 * t) / g;
         final h = m['v0']! * m['v0']! * math.pow(math.sin(t), 2) / (2 * g);
-        return ToolResult(mainResult: 'Range=${_n(range)} m', secondaryResults: [MapEntry('Time', '${_n(time)} s'), MapEntry('Hmax', '${_n(h.toDouble())} m')]);
+        return ToolResult(
+          mainResult: 'Range=${_n(range)} m',
+          secondaryResults: [
+            MapEntry('Time', '${_n(time)} s'),
+            MapEntry('Hmax', '${_n(h.toDouble())} m'),
+          ],
+        );
       },
     ),
     Tool(
@@ -210,7 +261,10 @@ class ToolRegistry {
       compute: (m) {
         final w = m['F']! * m['d']!;
         final p = w / m['t']!;
-        return ToolResult(mainResult: 'Work=${_n(w)} J', secondaryResults: [MapEntry('Power', '${_n(p)} W')]);
+        return ToolResult(
+          mainResult: 'Work=${_n(w)} J',
+          secondaryResults: [MapEntry('Power', '${_n(p)} W')],
+        );
       },
     ),
     Tool(
@@ -219,28 +273,60 @@ class ToolRegistry {
       category: 'Physics',
       description: 'Ohm law and equivalent resistance.',
       inputs: const [
-        ToolInputSchema(key: 'V', label: 'Voltage', defaultValue: '12', unit: 'V', min: 0),
-        ToolInputSchema(key: 'R1', label: 'R1', defaultValue: '100', unitOptions: [
-          ToolUnitOption(symbol: 'Ω', factorToBase: 1),
-          ToolUnitOption(symbol: 'kΩ', factorToBase: 1e3),
-          ToolUnitOption(symbol: 'MΩ', factorToBase: 1e6),
-        ], examples: ['100', '1000'], min: 0),
-        ToolInputSchema(key: 'R2', label: 'R2', defaultValue: '200', unitOptions: [
-          ToolUnitOption(symbol: 'Ω', factorToBase: 1),
-          ToolUnitOption(symbol: 'kΩ', factorToBase: 1e3),
-          ToolUnitOption(symbol: 'MΩ', factorToBase: 1e6),
-        ], examples: ['220', '1000'], min: 0),
-        ToolInputSchema(key: 'mode', label: 'Connection', type: ToolInputType.dropdown, options: [
-          ToolSelectOption(label: 'Series', value: 0),
-          ToolSelectOption(label: 'Parallel', value: 1),
-        ]),
+        ToolInputSchema(
+          key: 'V',
+          label: 'Voltage',
+          defaultValue: '12',
+          unit: 'V',
+          min: 0,
+        ),
+        ToolInputSchema(
+          key: 'R1',
+          label: 'R1',
+          defaultValue: '100',
+          unitOptions: [
+            ToolUnitOption(symbol: 'Ω', factorToBase: 1),
+            ToolUnitOption(symbol: 'kΩ', factorToBase: 1e3),
+            ToolUnitOption(symbol: 'MΩ', factorToBase: 1e6),
+          ],
+          examples: ['100', '1000'],
+          min: 0,
+        ),
+        ToolInputSchema(
+          key: 'R2',
+          label: 'R2',
+          defaultValue: '200',
+          unitOptions: [
+            ToolUnitOption(symbol: 'Ω', factorToBase: 1),
+            ToolUnitOption(symbol: 'kΩ', factorToBase: 1e3),
+            ToolUnitOption(symbol: 'MΩ', factorToBase: 1e6),
+          ],
+          examples: ['220', '1000'],
+          min: 0,
+        ),
+        ToolInputSchema(
+          key: 'mode',
+          label: 'Connection',
+          type: ToolInputType.dropdown,
+          options: [
+            ToolSelectOption(label: 'Series', value: 0),
+            ToolSelectOption(label: 'Parallel', value: 1),
+          ],
+        ),
       ],
       compute: (m) {
         final rs = m['R1']! + m['R2']!;
         final rp = (m['R1']! * m['R2']!) / (m['R1']! + m['R2']!);
         final selectedReq = (m['mode'] ?? 0) == 1 ? rp : rs;
         final i = m['V']! / selectedReq;
-        return ToolResult(mainResult: 'Req=${_n(selectedReq)} Ω', secondaryResults: [MapEntry('Series Req', '${_n(rs)} Ω'), MapEntry('Parallel Req', '${_n(rp)} Ω'), MapEntry('Current', '${_n(i)} A')]);
+        return ToolResult(
+          mainResult: 'Req=${_n(selectedReq)} Ω',
+          secondaryResults: [
+            MapEntry('Series Req', '${_n(rs)} Ω'),
+            MapEntry('Parallel Req', '${_n(rp)} Ω'),
+            MapEntry('Current', '${_n(i)} A'),
+          ],
+        );
       },
     ),
     Tool(
@@ -249,25 +335,49 @@ class ToolRegistry {
       category: 'Physics',
       description: 'Series/parallel capacitance and stored energy.',
       inputs: const [
-        ToolInputSchema(key: 'C1', label: 'C1', defaultValue: '1', unitOptions: [
-          ToolUnitOption(symbol: 'F', factorToBase: 1),
-          ToolUnitOption(symbol: 'mF', factorToBase: 1e-3),
-          ToolUnitOption(symbol: 'µF', factorToBase: 1e-6),
-          ToolUnitOption(symbol: 'nF', factorToBase: 1e-9),
-        ], examples: ['1', '10', '100']),
-        ToolInputSchema(key: 'C2', label: 'C2', defaultValue: '2', unitOptions: [
-          ToolUnitOption(symbol: 'F', factorToBase: 1),
-          ToolUnitOption(symbol: 'mF', factorToBase: 1e-3),
-          ToolUnitOption(symbol: 'µF', factorToBase: 1e-6),
-          ToolUnitOption(symbol: 'nF', factorToBase: 1e-9),
-        ], examples: ['1', '10', '100']),
-        ToolInputSchema(key: 'V', label: 'Voltage', defaultValue: '10', unit: 'V', min: 0),
+        ToolInputSchema(
+          key: 'C1',
+          label: 'C1',
+          defaultValue: '1',
+          unitOptions: [
+            ToolUnitOption(symbol: 'F', factorToBase: 1),
+            ToolUnitOption(symbol: 'mF', factorToBase: 1e-3),
+            ToolUnitOption(symbol: 'µF', factorToBase: 1e-6),
+            ToolUnitOption(symbol: 'nF', factorToBase: 1e-9),
+          ],
+          examples: ['1', '10', '100'],
+        ),
+        ToolInputSchema(
+          key: 'C2',
+          label: 'C2',
+          defaultValue: '2',
+          unitOptions: [
+            ToolUnitOption(symbol: 'F', factorToBase: 1),
+            ToolUnitOption(symbol: 'mF', factorToBase: 1e-3),
+            ToolUnitOption(symbol: 'µF', factorToBase: 1e-6),
+            ToolUnitOption(symbol: 'nF', factorToBase: 1e-9),
+          ],
+          examples: ['1', '10', '100'],
+        ),
+        ToolInputSchema(
+          key: 'V',
+          label: 'Voltage',
+          defaultValue: '10',
+          unit: 'V',
+          min: 0,
+        ),
       ],
       compute: (m) {
         final cp = m['C1']! + m['C2']!;
         final cs = (m['C1']! * m['C2']!) / (m['C1']! + m['C2']!);
         final e = 0.5 * cp * m['V']! * m['V']!;
-        return ToolResult(mainResult: 'Cparallel=${_n(cp)} F', secondaryResults: [MapEntry('Cseries', '${_n(cs)} F'), MapEntry('Energy (parallel)', '${_n(e)} J')]);
+        return ToolResult(
+          mainResult: 'Cparallel=${_n(cp)} F',
+          secondaryResults: [
+            MapEntry('Cseries', '${_n(cs)} F'),
+            MapEntry('Energy (parallel)', '${_n(e)} J'),
+          ],
+        );
       },
     ),
     Tool(
@@ -284,22 +394,77 @@ class ToolRegistry {
         const k = 8.9875517923e9;
         final f = k * m['q1']! * m['q2']! / (m['r']! * m['r']!);
         final e = k * m['q1']! / (m['r']! * m['r']!);
-        return ToolResult(mainResult: 'F=${_n(f)} N', secondaryResults: [MapEntry('E', '${_n(e)} N/C')]);
+        return ToolResult(
+          mainResult: 'F=${_n(f)} N',
+          secondaryResults: [MapEntry('E', '${_n(e)} N/C')],
+        );
       },
     ),
     Tool(
       id: 'unit_converter',
       title: 'Unit Converter',
       category: 'Physics',
-      description: 'Generic converter using factor method.',
-      inputs: const [
-        ToolInputSchema(key: 'value', label: 'Value', defaultValue: '1'),
-        ToolInputSchema(key: 'fromFactor', label: 'From base factor', defaultValue: '1'),
-        ToolInputSchema(key: 'toFactor', label: 'To base factor', defaultValue: '1000'),
+      description: 'Convert length, temperature, pressure, energy, and more.',
+      tags: [
+        'celsius',
+        'fahrenheit',
+        'kelvin',
+        'meters',
+        'feet',
+        'inches',
+        'units',
+      ],
+      inputs: [
+        const ToolInputSchema(key: 'value', label: 'Value', defaultValue: '1'),
+        ToolInputSchema(
+          key: 'fromUnit',
+          label: 'From',
+          type: ToolInputType.dropdown,
+          options: UnitConversion.units
+              .asMap()
+              .entries
+              .map(
+                (e) => ToolSelectOption(
+                  label: e.value.symbol,
+                  value: e.key.toDouble(),
+                ),
+              )
+              .toList(),
+        ),
+        ToolInputSchema(
+          key: 'toUnit',
+          label: 'To',
+          type: ToolInputType.dropdown,
+          options: UnitConversion.units
+              .asMap()
+              .entries
+              .map(
+                (e) => ToolSelectOption(
+                  label: e.value.symbol,
+                  value: e.key.toDouble(),
+                ),
+              )
+              .toList(),
+        ),
       ],
       compute: (m) {
-        final out = m['value']! * m['fromFactor']! / m['toFactor']!;
-        return ToolResult(mainResult: 'Converted=${_n(out)}');
+        try {
+          final from = m['fromUnit']!.toInt();
+          final to = m['toUnit']!.toInt();
+          final out = UnitConversion.convert(m['value']!, from, to);
+          final source = UnitConversion.units[from];
+          final target = UnitConversion.units[to];
+          return ToolResult(
+            mainResult: '${_n(out)} ${target.symbol}',
+            steps: [
+              '${_n(m['value']!)} ${source.symbol} → ${target.symbol}',
+              'Base value = input × ${source.factor} + ${source.offset}',
+              'Output = (base value − ${target.offset}) / ${target.factor}',
+            ],
+          );
+        } on FormatException catch (e) {
+          return ToolResult(mainResult: e.message, error: e.message);
+        }
       },
     ),
     Tool(
@@ -314,31 +479,57 @@ class ToolRegistry {
       ],
       compute: (m) {
         final vout = m['Vin']! * m['R2']! / (m['R1']! + m['R2']!);
-        return ToolResult(mainResult: 'Vout=${_n(vout)} V', steps: ['Apply divider ratio R2/(R1+R2).']);
+        return ToolResult(
+          mainResult: 'Vout=${_n(vout)} V',
+          steps: ['Apply divider ratio R2/(R1+R2).'],
+        );
       },
     ),
     Tool(
       id: 'rc_charge',
-      title: 'RC Charge/Discharge',
+      title: 'RC Charging',
       category: 'Circuits',
       description: 'Time constant and voltage at time t.',
       inputs: const [
-        ToolInputSchema(key: 'R', label: 'R', defaultValue: '1', unitOptions: [
-          ToolUnitOption(symbol: 'Ω', factorToBase: 1),
-          ToolUnitOption(symbol: 'kΩ', factorToBase: 1e3),
-        ], examples: ['1', '10']),
-        ToolInputSchema(key: 'C', label: 'C', defaultValue: '1', unitOptions: [
-          ToolUnitOption(symbol: 'F', factorToBase: 1),
-          ToolUnitOption(symbol: 'mF', factorToBase: 1e-3),
-          ToolUnitOption(symbol: 'µF', factorToBase: 1e-6),
-        ], examples: ['1', '10', '100']),
+        ToolInputSchema(
+          key: 'R',
+          label: 'R',
+          defaultValue: '1',
+          unitOptions: [
+            ToolUnitOption(symbol: 'Ω', factorToBase: 1),
+            ToolUnitOption(symbol: 'kΩ', factorToBase: 1e3),
+          ],
+          examples: ['1', '10'],
+        ),
+        ToolInputSchema(
+          key: 'C',
+          label: 'C',
+          defaultValue: '1',
+          unitOptions: [
+            ToolUnitOption(symbol: 'F', factorToBase: 1),
+            ToolUnitOption(symbol: 'mF', factorToBase: 1e-3),
+            ToolUnitOption(symbol: 'µF', factorToBase: 1e-6),
+          ],
+          examples: ['1', '10', '100'],
+        ),
         ToolInputSchema(key: 'Vin', label: 'Vin', defaultValue: '5', unit: 'V'),
-        ToolInputSchema(key: 't', label: 't', type: ToolInputType.range, defaultValue: '1', min: 0, max: 10, unit: 's'),
+        ToolInputSchema(
+          key: 't',
+          label: 't',
+          type: ToolInputType.range,
+          defaultValue: '1',
+          min: 0,
+          max: 10,
+          unit: 's',
+        ),
       ],
       compute: (m) {
         final tau = m['R']! * m['C']!;
         final vc = m['Vin']! * (1 - math.exp(-m['t']! / tau));
-        return ToolResult(mainResult: 'τ=${_n(tau)} s', secondaryResults: [MapEntry('Vc(t)', '${_n(vc)} V')]);
+        return ToolResult(
+          mainResult: 'τ=${_n(tau)} s',
+          secondaryResults: [MapEntry('Vc(t)', '${_n(vc)} V')],
+        );
       },
     ),
     Tool(
@@ -355,7 +546,13 @@ class ToolRegistry {
         final s = m['V']! * m['I']!;
         final p = s * m['pf']!;
         final q = math.sqrt(math.max(0, s * s - p * p));
-        return ToolResult(mainResult: 'P=${_n(p)} W', secondaryResults: [MapEntry('Q', '${_n(q)} var'), MapEntry('S', '${_n(s)} VA')]);
+        return ToolResult(
+          mainResult: 'P=${_n(p)} W',
+          secondaryResults: [
+            MapEntry('Q', '${_n(q)} var'),
+            MapEntry('S', '${_n(s)} VA'),
+          ],
+        );
       },
     ),
     Tool(
@@ -369,7 +566,13 @@ class ToolRegistry {
       ],
       compute: (m) {
         final inorton = m['Voc']! / m['Rth']!;
-        return ToolResult(mainResult: 'Inorton=${_n(inorton)} A', secondaryResults: [MapEntry('Vth', '${_n(m['Voc']!)} V'), MapEntry('Rn', '${_n(m['Rth']!)} Ω')]);
+        return ToolResult(
+          mainResult: 'Inorton=${_n(inorton)} A',
+          secondaryResults: [
+            MapEntry('Vth', '${_n(m['Voc']!)} V'),
+            MapEntry('Rn', '${_n(m['Rth']!)} Ω'),
+          ],
+        );
       },
     ),
     Tool(
@@ -378,13 +581,23 @@ class ToolRegistry {
       category: 'Helpers',
       description: 'Compute absolute, relative, and percent error.',
       inputs: const [
-        ToolInputSchema(key: 'measured', label: 'Measured', defaultValue: '9.8'),
+        ToolInputSchema(
+          key: 'measured',
+          label: 'Measured',
+          defaultValue: '9.8',
+        ),
         ToolInputSchema(key: 'true', label: 'True', defaultValue: '10'),
       ],
       compute: (m) {
         final abs = (m['measured']! - m['true']!).abs();
-        final rel = abs / m['true']!;
-        return ToolResult(mainResult: '% error=${_n(rel * 100)}%', secondaryResults: [MapEntry('Abs error', _n(abs)), MapEntry('Relative', _n(rel))]);
+        final rel = abs / m['true']!.abs();
+        return ToolResult(
+          mainResult: '% error=${_n(rel * 100)}%',
+          secondaryResults: [
+            MapEntry('Abs error', _n(abs)),
+            MapEntry('Relative', _n(rel)),
+          ],
+        );
       },
     ),
     Tool(
@@ -392,7 +605,9 @@ class ToolRegistry {
       title: 'Scientific Notation Helper',
       category: 'Helpers',
       description: 'Convert number to a×10^n.',
-      inputs: const [ToolInputSchema(key: 'x', label: 'Value', defaultValue: '12345')],
+      inputs: const [
+        ToolInputSchema(key: 'x', label: 'Value', defaultValue: '12345'),
+      ],
       compute: (m) {
         final x = m['x']!;
         if (x == 0) return const ToolResult(mainResult: '0 = 0×10^0');
@@ -413,9 +628,8 @@ class ToolRegistry {
       compute: (m) {
         final n = m['n']!.round();
         final x = m['x']!;
-        final exp = math.pow(10, n - 1 - (math.log(x.abs()) / math.ln10).floor());
-        final r = (x * exp).round() / exp;
-        return ToolResult(mainResult: 'Rounded=${_n(r)}');
+        if (x == 0) return const ToolResult(mainResult: 'Rounded=0');
+        return ToolResult(mainResult: 'Rounded=${x.toStringAsPrecision(n)}');
       },
     ),
     Tool(
@@ -441,13 +655,31 @@ class ToolRegistry {
       description: 'Compute maximum bending stress using σ = Mc/I.',
       tags: ['beam', 'stress', 'mechanics of materials'],
       inputs: const [
-        ToolInputSchema(key: 'M', label: 'Moment M', defaultValue: '1200', unit: 'N·m'),
-        ToolInputSchema(key: 'c', label: 'Distance c', defaultValue: '0.05', unit: 'm'),
-        ToolInputSchema(key: 'I', label: 'Second moment I', defaultValue: '0.000008', unit: 'm⁴'),
+        ToolInputSchema(
+          key: 'M',
+          label: 'Moment M',
+          defaultValue: '1200',
+          unit: 'N·m',
+        ),
+        ToolInputSchema(
+          key: 'c',
+          label: 'Distance c',
+          defaultValue: '0.05',
+          unit: 'm',
+        ),
+        ToolInputSchema(
+          key: 'I',
+          label: 'Second moment I',
+          defaultValue: '0.000008',
+          unit: 'm⁴',
+        ),
       ],
       compute: (m) {
         final stress = m['M']! * m['c']! / m['I']!;
-        return ToolResult(mainResult: 'σmax=${_n(stress)} Pa', secondaryResults: [MapEntry('≈ MPa', _n(stress / 1e6))]);
+        return ToolResult(
+          mainResult: 'σmax=${_n(stress)} Pa',
+          secondaryResults: [MapEntry('≈ MPa', _n(stress / 1e6))],
+        );
       },
     ),
     Tool(
@@ -457,15 +689,40 @@ class ToolRegistry {
       description: 'Flow regime indicator Re = ρVD/μ.',
       tags: ['fluid', 'pipe', 'laminar', 'turbulent'],
       inputs: const [
-        ToolInputSchema(key: 'rho', label: 'Density ρ', defaultValue: '1000', unit: 'kg/m³'),
-        ToolInputSchema(key: 'V', label: 'Velocity V', defaultValue: '1.5', unit: 'm/s'),
-        ToolInputSchema(key: 'D', label: 'Diameter D', defaultValue: '0.05', unit: 'm'),
-        ToolInputSchema(key: 'mu', label: 'Dynamic viscosity μ', defaultValue: '0.001', unit: 'Pa·s'),
+        ToolInputSchema(
+          key: 'rho',
+          label: 'Density ρ',
+          defaultValue: '1000',
+          unit: 'kg/m³',
+        ),
+        ToolInputSchema(
+          key: 'V',
+          label: 'Velocity V',
+          defaultValue: '1.5',
+          unit: 'm/s',
+        ),
+        ToolInputSchema(
+          key: 'D',
+          label: 'Diameter D',
+          defaultValue: '0.05',
+          unit: 'm',
+        ),
+        ToolInputSchema(
+          key: 'mu',
+          label: 'Dynamic viscosity μ',
+          defaultValue: '0.001',
+          unit: 'Pa·s',
+        ),
       ],
       compute: (m) {
         final re = m['rho']! * m['V']! * m['D']! / m['mu']!;
-        final regime = re < 2300 ? 'Laminar' : (re < 4000 ? 'Transition' : 'Turbulent');
-        return ToolResult(mainResult: 'Re=${_n(re)}', secondaryResults: [MapEntry('Regime', regime)]);
+        final regime = re < 2300
+            ? 'Laminar'
+            : (re < 4000 ? 'Transition' : 'Turbulent');
+        return ToolResult(
+          mainResult: 'Re=${_n(re)}',
+          secondaryResults: [MapEntry('Regime', regime)],
+        );
       },
     ),
     Tool(
@@ -476,13 +733,26 @@ class ToolRegistry {
       tags: ['thermo', 'gas law'],
       inputs: const [
         ToolInputSchema(key: 'n', label: 'Moles n', defaultValue: '1'),
-        ToolInputSchema(key: 'T', label: 'Temperature T', defaultValue: '300', unit: 'K'),
-        ToolInputSchema(key: 'V', label: 'Volume V', defaultValue: '0.024', unit: 'm³'),
+        ToolInputSchema(
+          key: 'T',
+          label: 'Temperature T',
+          defaultValue: '300',
+          unit: 'K',
+        ),
+        ToolInputSchema(
+          key: 'V',
+          label: 'Volume V',
+          defaultValue: '0.024',
+          unit: 'm³',
+        ),
       ],
       compute: (m) {
         const r = 8.314462618;
         final p = m['n']! * r * m['T']! / m['V']!;
-        return ToolResult(mainResult: 'P=${_n(p)} Pa', secondaryResults: [MapEntry('kPa', _n(p / 1000))]);
+        return ToolResult(
+          mainResult: 'P=${_n(p)} Pa',
+          secondaryResults: [MapEntry('kPa', _n(p / 1000))],
+        );
       },
     ),
     Tool(
@@ -492,16 +762,43 @@ class ToolRegistry {
       description: 'Weighted GPA from previous and current semester.',
       tags: ['gpa', 'academic', 'planner'],
       inputs: const [
-        ToolInputSchema(key: 'prevCgpa', label: 'Previous CGPA', defaultValue: '3.2', min: 0, max: 4),
-        ToolInputSchema(key: 'prevCredits', label: 'Previous credits', defaultValue: '72', min: 0),
-        ToolInputSchema(key: 'currentGpa', label: 'Current semester GPA', defaultValue: '3.6', min: 0, max: 4),
-        ToolInputSchema(key: 'currentCredits', label: 'Current credits', defaultValue: '18', min: 1),
+        ToolInputSchema(
+          key: 'prevCgpa',
+          label: 'Previous CGPA',
+          defaultValue: '3.2',
+          min: 0,
+          max: 4,
+        ),
+        ToolInputSchema(
+          key: 'prevCredits',
+          label: 'Previous credits',
+          defaultValue: '72',
+          min: 0,
+        ),
+        ToolInputSchema(
+          key: 'currentGpa',
+          label: 'Current semester GPA',
+          defaultValue: '3.6',
+          min: 0,
+          max: 4,
+        ),
+        ToolInputSchema(
+          key: 'currentCredits',
+          label: 'Current credits',
+          defaultValue: '18',
+          min: 1,
+        ),
       ],
       compute: (m) {
-        final totalPts = m['prevCgpa']! * m['prevCredits']! + m['currentGpa']! * m['currentCredits']!;
+        final totalPts =
+            m['prevCgpa']! * m['prevCredits']! +
+            m['currentGpa']! * m['currentCredits']!;
         final totalCredits = m['prevCredits']! + m['currentCredits']!;
         final cgpa = totalPts / totalCredits;
-        return ToolResult(mainResult: 'Updated CGPA=${_n(cgpa)}', secondaryResults: [MapEntry('Total credits', _n(totalCredits))]);
+        return ToolResult(
+          mainResult: 'Updated CGPA=${_n(cgpa)}',
+          secondaryResults: [MapEntry('Total credits', _n(totalCredits))],
+        );
       },
     ),
     Tool(
@@ -511,23 +808,65 @@ class ToolRegistry {
       description: 'Compute Vs and current ratio in ideal transformer.',
       tags: ['transformer', 'power systems'],
       inputs: const [
-        ToolInputSchema(key: 'Vp', label: 'Primary voltage Vp', defaultValue: '230', unit: 'V'),
-        ToolInputSchema(key: 'Np', label: 'Primary turns Np', defaultValue: '500'),
-        ToolInputSchema(key: 'Ns', label: 'Secondary turns Ns', defaultValue: '100'),
-        ToolInputSchema(key: 'Ip', label: 'Primary current Ip', defaultValue: '2', unit: 'A'),
+        ToolInputSchema(
+          key: 'Vp',
+          label: 'Primary voltage Vp',
+          defaultValue: '230',
+          unit: 'V',
+        ),
+        ToolInputSchema(
+          key: 'Np',
+          label: 'Primary turns Np',
+          defaultValue: '500',
+        ),
+        ToolInputSchema(
+          key: 'Ns',
+          label: 'Secondary turns Ns',
+          defaultValue: '100',
+        ),
+        ToolInputSchema(
+          key: 'Ip',
+          label: 'Primary current Ip',
+          defaultValue: '2',
+          unit: 'A',
+        ),
       ],
       compute: (m) {
         final ratio = m['Ns']! / m['Np']!;
         final vs = m['Vp']! * ratio;
         final isec = m['Ip']! / ratio;
-        return ToolResult(mainResult: 'Vs=${_n(vs)} V', secondaryResults: [MapEntry('Turns ratio Ns/Np', _n(ratio)), MapEntry('Secondary current Is', '${_n(isec)} A')]);
+        return ToolResult(
+          mainResult: 'Vs=${_n(vs)} V',
+          secondaryResults: [
+            MapEntry('Turns ratio Ns/Np', _n(ratio)),
+            MapEntry('Secondary current Is', '${_n(isec)} A'),
+          ],
+        );
       },
     ),
   ];
 
   static Tool byId(String id) => tools.firstWhere((t) => t.id == id);
 
-  static List<String> categories() => tools.map((e) => e.category).toSet().toList()..sort();
+  static Tool? find(String id) {
+    for (final tool in tools) {
+      if (tool.id == id) return tool;
+    }
+    return null;
+  }
+
+  static List<String> categories() =>
+      tools.map((e) => e.category).toSet().toList()..sort();
 }
 
-String _n(double v) => v.toStringAsPrecision(6);
+String _n(double v) {
+  if (!v.isFinite) return v.toString();
+  final precision = Zone.current[#precision] as int? ?? 4;
+  if (Zone.current[#scientific] == true ||
+      (v != 0 && (v.abs() < math.pow(10, -precision) || v.abs() >= 1e9))) {
+    return v.toStringAsExponential(precision);
+  }
+  final text = v.toStringAsFixed(precision);
+  if (!text.contains('.')) return text;
+  return text.replaceFirst(RegExp(r'0+$'), '').replaceFirst(RegExp(r'\.$'), '');
+}
