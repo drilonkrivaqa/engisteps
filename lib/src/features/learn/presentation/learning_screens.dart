@@ -5,208 +5,9 @@ import 'package:go_router/go_router.dart';
 import '../../../core/utils/smart_number_parser.dart';
 import '../data/learning_repository.dart';
 import '../domain/circuit_course.dart';
+import '../domain/circuit_experiment.dart';
 
-class LearnScreen extends ConsumerWidget {
-  const LearnScreen({super.key});
-  @override
-  Widget build(BuildContext context, WidgetRef ref) => Scaffold(
-    appBar: AppBar(
-      title: const Text('EngiSteps'),
-      actions: [
-        IconButton(
-          tooltip: 'Study planner',
-          onPressed: () => context.push('/planner'),
-          icon: const Icon(Icons.event_note_outlined),
-        ),
-        IconButton(
-          tooltip: 'Settings',
-          onPressed: () => context.push('/settings'),
-          icon: const Icon(Icons.tune),
-        ),
-      ],
-    ),
-    body: ref
-        .watch(learningProvider)
-        .when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (_, _) => Center(
-            child: FilledButton(
-              onPressed: () => ref.invalidate(learningProvider),
-              child: const Text('Retry loading progress'),
-            ),
-          ),
-          data: (progress) => _home(context, ref, progress),
-        ),
-  );
-
-  Widget _home(BuildContext context, WidgetRef ref, LearningProgress progress) {
-    final next = progress.next;
-    final colors = Theme.of(context).colorScheme;
-    return Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 900),
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
-          children: [
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: colors.primaryContainer,
-                borderRadius: BorderRadius.circular(28),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'CIRCUIT FUNDAMENTALS',
-                    style: TextStyle(
-                      color: colors.onPrimaryContainer,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 1.5,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    progress.attempts.isEmpty
-                        ? 'Know where to start.'
-                        : next == null
-                        ? 'Look how far you’ve come.'
-                        : 'Your next step is ready.',
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      color: colors.onPrimaryContainer,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    next == null
-                        ? 'You solved all 12 practice problems without help on your latest attempts. Revisit a topic to keep practicing.'
-                        : 'Understand the circuit. Choose a method. Work it out, one step at a time.',
-                    style: TextStyle(
-                      color: colors.onPrimaryContainer,
-                      height: 1.5,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  if (next != null) ...[
-                    Text(
-                      '${next.topic.title} · ${next.guided ? 'Guided example' : 'Practice'} · about 5 min',
-                      style: TextStyle(color: colors.onPrimaryContainer),
-                    ),
-                    const SizedBox(height: 8),
-                    FilledButton.icon(
-                      onPressed: () =>
-                          context.push('/learn/problem/${next.id}'),
-                      icon: const Icon(Icons.arrow_forward),
-                      label: Text(
-                        progress.attempts.isEmpty
-                            ? 'Solve my first circuit'
-                            : 'Continue learning',
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-            _Panel(
-              title: 'Your understanding, step by step',
-              children: [
-                Text(
-                  '${progress.independentCount} of 12 practice problems solved without help',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const SizedBox(height: 12),
-                LinearProgressIndicator(
-                  value: progress.independentCount / 12,
-                  minHeight: 8,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                const SizedBox(height: 12),
-                const Text(
-                  'Based on your latest attempts. Guided examples and answers reached with hints are kept separate.',
-                ),
-                if (progress.review.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 12),
-                    child: Text(
-                      '${progress.review.length} completed practice problems to revisit without help.',
-                    ),
-                  ),
-                if (progress.review.isNotEmpty)
-                  TextButton.icon(
-                    onPressed: () => context.push(
-                      '/learn/problem/${progress.review.first.id}',
-                    ),
-                    icon: const Icon(Icons.replay),
-                    label: const Text('Revisit a tricky problem'),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'What are you studying?',
-              style: Theme.of(
-                context,
-              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 6),
-            const Text(
-              'Start at the beginning or jump to your current topic. Each topic has one example and four practice problems.',
-            ),
-            const SizedBox(height: 12),
-            for (final topic in circuitTopics)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: Card(
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.all(16),
-                    leading: Icon(
-                      topic.kind == CircuitKind.parallel
-                          ? Icons.call_split
-                          : topic.kind == CircuitKind.divider
-                          ? Icons.bolt
-                          : Icons.linear_scale,
-                      color: colors.primary,
-                    ),
-                    title: Text(
-                      topic.title,
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    subtitle: Text(
-                      '${topic.outcome}\n${topic.problems.where((p) => progress.attempt(p.id).completed).length} / 5 activities complete',
-                    ),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => context.push('/learn/topic/${topic.id}'),
-                  ),
-                ),
-              ),
-            const SizedBox(height: 12),
-            _Panel(
-              title: 'Already know what you need?',
-              children: [
-                const Text(
-                  'Your 26 calculators, unit converter and saved working are still here.',
-                ),
-                const SizedBox(height: 8),
-                OutlinedButton.icon(
-                  onPressed: () => context.go('/tools'),
-                  icon: const Icon(Icons.calculate_outlined),
-                  label: const Text('Open the workbench'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Works on this device, without an account. Learning progress saves automatically.',
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
+export 'student_home_screen.dart' show LearnScreen;
 
 class TopicScreen extends ConsumerWidget {
   const TopicScreen({super.key, required this.topicId});
@@ -304,6 +105,7 @@ class ProblemScreen extends ConsumerStatefulWidget {
 
 class _ProblemState extends ConsumerState<ProblemScreen> {
   final _answer = TextEditingController();
+  final _stepKey = GlobalKey();
   bool _busy = false;
   String? _feedback;
   @override
@@ -318,6 +120,17 @@ class _ProblemState extends ConsumerState<ProblemScreen> {
     try {
       await ref.read(learningProvider.notifier).save(widget.problemId, attempt);
       if (mounted) setState(() => _feedback = feedback);
+      if (mounted && (attempt.methodDone || attempt.completed)) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          final stepContext = _stepKey.currentContext;
+          if (mounted && stepContext != null) {
+            Scrollable.ensureVisible(
+              stepContext,
+              duration: const Duration(milliseconds: 250),
+            );
+          }
+        });
+      }
     } catch (_) {
       if (mounted) {
         setState(
@@ -392,18 +205,22 @@ class _ProblemState extends ConsumerState<ProblemScreen> {
             CircuitDiagram(problem: p),
             const SizedBox(height: 16),
             if (p.guided) ...[
-              _Panel(
-                title: 'Understand the connection',
-                children: [
-                  Text(p.topic.concept),
-                  const SizedBox(height: 8),
-                  Text('Method: ${p.methods[p.method]}'),
-                ],
+              Card(
+                child: ExpansionTile(
+                  title: const Text('How does this circuit work?'),
+                  childrenPadding: const EdgeInsets.all(16),
+                  children: [
+                    Text(p.topic.concept),
+                    const SizedBox(height: 8),
+                    Text('Method: ${p.methods[p.method]}'),
+                  ],
+                ),
               ),
               const SizedBox(height: 16),
             ],
             if (!attempt.completed) ...[
               _Panel(
+                key: _stepKey,
                 title: attempt.methodDone
                     ? '2. Work out the answer'
                     : '1. Choose your method',
@@ -497,6 +314,7 @@ class _ProblemState extends ConsumerState<ProblemScreen> {
               ),
             ] else ...[
               _Panel(
+                key: _stepKey,
                 title: p.guided
                     ? 'Example complete. Now try it yourself.'
                     : attempt.independent
@@ -579,8 +397,16 @@ class _ProblemState extends ConsumerState<ProblemScreen> {
                     ],
                   ),
                   OutlinedButton(
-                    onPressed: () => context.push('/tool/${p.topic.toolId}'),
-                    child: const Text('Explore with the calculator'),
+                    onPressed: () => context.push(
+                      '/lab',
+                      extra: CircuitExperiment(
+                        kind: p.topic.kind,
+                        r1: p.r1,
+                        r2: p.r2,
+                        voltage: p.voltage,
+                      ),
+                    ),
+                    child: const Text('Experiment with this circuit'),
                   ),
                 ],
               ),
@@ -623,7 +449,7 @@ class _ProblemState extends ConsumerState<ProblemScreen> {
 }
 
 class _Panel extends StatelessWidget {
-  const _Panel({required this.title, required this.children});
+  const _Panel({super.key, required this.title, required this.children});
   final String title;
   final List<Widget> children;
   @override

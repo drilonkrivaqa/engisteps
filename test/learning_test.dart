@@ -221,7 +221,7 @@ void main() {
       router.go('/learn');
       await tester.pumpWidget(const ProviderScope(child: EngiStepsApp()));
       await tester.pumpAndSettle();
-      await tapText(tester, 'Solve my first circuit');
+      await tapText(tester, 'Start guided lesson');
       await tapText(tester, 'Add the resistances: R1 + R2');
       await tester.ensureVisible(find.byType(TextField));
       await tester.enterText(find.byType(TextField), '300');
@@ -242,7 +242,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byType(BackButton));
     await tester.pumpAndSettle();
-    expect(find.text('Know where to start.'), findsOneWidget);
+    expect(find.text('Engineering, one step at a time.'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

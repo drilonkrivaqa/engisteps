@@ -9,6 +9,10 @@ import '../../features/history/data/history_repository.dart';
 import '../../features/settings/presentation/settings_screens.dart';
 import '../../features/planner/presentation/planner_screen.dart';
 import '../../features/learn/presentation/learning_screens.dart';
+import '../../features/learn/presentation/student_home_screen.dart';
+import '../../features/home/presentation/work_screen.dart';
+import '../../features/learn/presentation/circuit_lab_screen.dart';
+import '../../features/learn/domain/circuit_experiment.dart';
 
 final router = GoRouter(
   initialLocation: '/learn',
@@ -29,23 +33,51 @@ final router = GoRouter(
         StatefulShellBranch(
           routes: [
             GoRoute(
-              path: '/favorites',
-              builder: (_, _) => const FavoritesScreen(),
+              path: '/work',
+              builder: (_, _) => const WorkScreen(),
+              routes: [
+                GoRoute(
+                  path: 'history',
+                  builder: (_, _) => const HistoryScreen(),
+                ),
+                GoRoute(
+                  path: 'favorites',
+                  builder: (_, _) => const FavoritesScreen(),
+                ),
+                GoRoute(
+                  path: 'notes',
+                  builder: (_, _) => Scaffold(
+                    appBar: AppBar(title: const Text('My notes')),
+                    body: const NotesScreen(),
+                  ),
+                ),
+                GoRoute(
+                  path: 'progress',
+                  builder: (_, _) => const ProgressScreen(),
+                ),
+                GoRoute(
+                  path: 'planner',
+                  builder: (_, _) => const EngineeringPlannerScreen(),
+                ),
+              ],
             ),
-          ],
-        ),
-        StatefulShellBranch(
-          routes: [
-            GoRoute(path: '/history', builder: (_, _) => const HistoryScreen()),
-          ],
-        ),
-        StatefulShellBranch(
-          routes: [
-            GoRoute(path: '/notes', builder: (_, _) => const NotesScreen()),
           ],
         ),
       ],
     ),
+    GoRoute(path: '/learn/course', builder: (_, _) => const CourseScreen()),
+    GoRoute(
+      path: '/lab',
+      builder: (_, s) => CircuitLabScreen(
+        topic: s.uri.queryParameters['topic'],
+        initial: s.extra is CircuitExperiment
+            ? s.extra as CircuitExperiment
+            : null,
+      ),
+    ),
+    GoRoute(path: '/notes', redirect: (_, _) => '/work/notes'),
+    GoRoute(path: '/history', redirect: (_, _) => '/work/history'),
+    GoRoute(path: '/favorites', redirect: (_, _) => '/work/favorites'),
     GoRoute(path: '/settings', builder: (_, _) => const SettingsScreen()),
     GoRoute(
       path: '/learn/topic/:id',
@@ -58,10 +90,7 @@ final router = GoRouter(
         problemId: s.pathParameters['id']!,
       ),
     ),
-    GoRoute(
-      path: '/planner',
-      builder: (_, _) => const EngineeringPlannerScreen(),
-    ),
+    GoRoute(path: '/planner', redirect: (_, _) => '/work/planner'),
     GoRoute(
       path: '/tool/:id',
       builder: (_, s) => ToolDetailScreen(
@@ -75,10 +104,16 @@ final router = GoRouter(
 class AppShell extends StatelessWidget {
   const AppShell({super.key, required this.shell});
   final StatefulNavigationShell shell;
-
   @override
   Widget build(BuildContext context) {
-    if (MediaQuery.sizeOf(context).width >= 900) {
+    final wide = MediaQuery.sizeOf(context).width >= 900;
+    const icons = [
+      Icons.home_outlined,
+      Icons.calculate_outlined,
+      Icons.folder_outlined,
+    ];
+    const labels = ['Home', 'Solve', 'My work'];
+    if (wide) {
       return Scaffold(
         body: Row(
           children: [
@@ -90,27 +125,12 @@ class AppShell extends StatelessWidget {
                 padding: EdgeInsets.symmetric(vertical: 24),
                 child: Icon(Icons.architecture, size: 32),
               ),
-              destinations: const [
-                NavigationRailDestination(
-                  icon: Icon(Icons.school_outlined),
-                  label: Text('Learn'),
-                ),
-                NavigationRailDestination(
-                  icon: Icon(Icons.build_outlined),
-                  label: Text('Tools'),
-                ),
-                NavigationRailDestination(
-                  icon: Icon(Icons.star_border),
-                  label: Text('Favorites'),
-                ),
-                NavigationRailDestination(
-                  icon: Icon(Icons.history),
-                  label: Text('History'),
-                ),
-                NavigationRailDestination(
-                  icon: Icon(Icons.note_alt_outlined),
-                  label: Text('Notes'),
-                ),
+              destinations: [
+                for (var i = 0; i < labels.length; i++)
+                  NavigationRailDestination(
+                    icon: Icon(icons[i]),
+                    label: Text(labels[i]),
+                  ),
               ],
             ),
             const VerticalDivider(width: 1),
@@ -123,29 +143,10 @@ class AppShell extends StatelessWidget {
       body: shell,
       bottomNavigationBar: NavigationBar(
         selectedIndex: shell.currentIndex,
-        onDestinationSelected: (idx) => shell.goBranch(idx),
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.school_outlined),
-            selectedIcon: Icon(Icons.school),
-            label: 'Learn',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.build_outlined),
-            selectedIcon: Icon(Icons.build),
-            label: 'Tools',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.star_border),
-            selectedIcon: Icon(Icons.star),
-            label: 'Favorites',
-          ),
-          NavigationDestination(icon: Icon(Icons.history), label: 'History'),
-          NavigationDestination(
-            icon: Icon(Icons.note_alt_outlined),
-            selectedIcon: Icon(Icons.note_alt),
-            label: 'Notes',
-          ),
+        onDestinationSelected: shell.goBranch,
+        destinations: [
+          for (var i = 0; i < labels.length; i++)
+            NavigationDestination(icon: Icon(icons[i]), label: labels[i]),
         ],
       ),
     );

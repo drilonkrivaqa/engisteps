@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/models/tool.dart';
 import '../../favorites/data/favorites_repository.dart';
-import '../../history/data/history_repository.dart';
+
 import '../domain/tool_registry.dart';
 import 'category_icon.dart';
 
@@ -38,10 +38,6 @@ class _ToolsHomeState extends ConsumerState<ToolsHomeScreen> {
         .map(ToolRegistry.find)
         .whereType<Tool>()
         .toList();
-    final history = ref
-        .watch(historyProvider)
-        .where((e) => ToolRegistry.find(e.toolId) != null)
-        .toList();
     return SafeArea(
       child: Center(
         child: ConstrainedBox(
@@ -62,7 +58,7 @@ class _ToolsHomeState extends ConsumerState<ToolsHomeScreen> {
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
-                            'EngiSteps',
+                            'Solve',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: Theme.of(context).textTheme.titleLarge
@@ -82,78 +78,16 @@ class _ToolsHomeState extends ConsumerState<ToolsHomeScreen> {
                       ],
                     ),
                     const SizedBox(height: 28),
-                    Container(
-                      padding: const EdgeInsets.all(24),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(24),
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF123A46), Color(0xFF146B70)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'YOUR ENGINEERING WORKBENCH',
-                            style: TextStyle(
-                              color: Color(0xFFA3E7D6),
-                              letterSpacing: 1.8,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            'Work it out.',
-                            style: Theme.of(context).textTheme.headlineMedium
-                                ?.copyWith(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                          ),
-                          const SizedBox(height: 12),
-                          const Text(
-                            'Engineering tools. Clear answers. Your working, saved.',
-                            style: TextStyle(
-                              color: Color(0xFFD3E9E7),
-                              height: 1.5,
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-                          Wrap(
-                            spacing: 10,
-                            runSpacing: 10,
-                            children: [
-                              FilledButton.tonalIcon(
-                                onPressed: () => history.isNotEmpty
-                                    ? context.push(
-                                        '/tool/${history.first.toolId}',
-                                        extra: history.first,
-                                      )
-                                    : context.push('/tool/quadratic_solver'),
-                                icon: const Icon(Icons.play_arrow_rounded),
-                                label: Text(
-                                  history.isNotEmpty
-                                      ? 'Resume last solve'
-                                      : 'Try a calculation',
-                                ),
-                              ),
-                              TextButton.icon(
-                                onPressed: () => context.go('/notes'),
-                                style: TextButton.styleFrom(
-                                  foregroundColor: Colors.white,
-                                ),
-                                icon: const Icon(Icons.edit_note),
-                                label: const Text('Open notebook'),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
+                    Text(
+                      'What do you need to calculate?',
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(fontWeight: FontWeight.w700),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Search a topic or choose a calculator below. Enter your values to see the working.',
+                    ),
+                    const SizedBox(height: 16),
                     TextField(
                       controller: _search,
                       onChanged: (_) => setState(() {}),
@@ -170,6 +104,29 @@ class _ToolsHomeState extends ConsumerState<ToolsHomeScreen> {
                       ),
                     ),
                     const SizedBox(height: 14),
+                    if (query.isEmpty && _category == null) ...[
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          ActionChip(
+                            label: const Text('Convert units'),
+                            onPressed: () =>
+                                context.push('/tool/unit_converter'),
+                          ),
+                          ActionChip(
+                            label: const Text('Find resistance'),
+                            onPressed: () =>
+                                context.push('/tool/ohms_resistors'),
+                          ),
+                          ActionChip(
+                            label: const Text('Circuit lab'),
+                            onPressed: () => context.push('/lab'),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                    ],
                     SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       child: Row(
