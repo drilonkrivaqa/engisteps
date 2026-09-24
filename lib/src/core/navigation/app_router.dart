@@ -8,13 +8,19 @@ import '../../features/tools/presentation/tools_screens.dart';
 import '../../features/history/data/history_repository.dart';
 import '../../features/settings/presentation/settings_screens.dart';
 import '../../features/planner/presentation/planner_screen.dart';
+import '../../features/learn/presentation/learning_screens.dart';
 
 final router = GoRouter(
-  initialLocation: '/tools',
+  initialLocation: '/learn',
   routes: [
     StatefulShellRoute.indexedStack(
       builder: (context, state, shell) => AppShell(shell: shell),
       branches: [
+        StatefulShellBranch(
+          routes: [
+            GoRoute(path: '/learn', builder: (_, _) => const LearnScreen()),
+          ],
+        ),
         StatefulShellBranch(
           routes: [
             GoRoute(path: '/tools', builder: (_, _) => const ToolsHomeScreen()),
@@ -41,6 +47,17 @@ final router = GoRouter(
       ],
     ),
     GoRoute(path: '/settings', builder: (_, _) => const SettingsScreen()),
+    GoRoute(
+      path: '/learn/topic/:id',
+      builder: (_, s) => TopicScreen(topicId: s.pathParameters['id']!),
+    ),
+    GoRoute(
+      path: '/learn/problem/:id',
+      builder: (_, s) => ProblemScreen(
+        key: ValueKey(s.pathParameters['id']),
+        problemId: s.pathParameters['id']!,
+      ),
+    ),
     GoRoute(
       path: '/planner',
       builder: (_, _) => const EngineeringPlannerScreen(),
@@ -75,6 +92,10 @@ class AppShell extends StatelessWidget {
               ),
               destinations: const [
                 NavigationRailDestination(
+                  icon: Icon(Icons.school_outlined),
+                  label: Text('Learn'),
+                ),
+                NavigationRailDestination(
                   icon: Icon(Icons.build_outlined),
                   label: Text('Tools'),
                 ),
@@ -104,6 +125,11 @@ class AppShell extends StatelessWidget {
         selectedIndex: shell.currentIndex,
         onDestinationSelected: (idx) => shell.goBranch(idx),
         destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.school_outlined),
+            selectedIcon: Icon(Icons.school),
+            label: 'Learn',
+          ),
           NavigationDestination(
             icon: Icon(Icons.build_outlined),
             selectedIcon: Icon(Icons.build),

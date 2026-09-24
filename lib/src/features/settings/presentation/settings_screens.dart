@@ -62,9 +62,27 @@ class SettingsScreen extends ConsumerWidget {
 
           const SectionCard(
             title: 'About',
-            subtitle: 'EngiSteps is offline-first and fast.',
+            subtitle: 'Learn the method. Solve the next one yourself.',
             child: Text(
-              'Calculations, favorites, and notes stay on this device. No account required. Saved results keep their original display precision.',
+              'Guided circuit examples, independent practice and 26 engineering tools. Learning progress, calculations, favorites and notes are stored on this device. No account required.',
+            ),
+          ),
+          const SizedBox(height: 12),
+          const SectionCard(
+            title: 'Privacy & your data',
+            child: Text(
+              'EngiSteps does not send your learning answers, notes or calculations to a server. There are no ads or analytics SDKs. Data is saved locally; your device or browser backup settings may also apply. Clearing app storage or browser site data removes your saved work. Copy any working you want to keep before clearing storage.',
+            ),
+          ),
+          const SizedBox(height: 12),
+          SectionCard(
+            title: 'Open-source licenses',
+            child: TextButton(
+              onPressed: () => showLicensePage(
+                context: context,
+                applicationName: 'EngiSteps',
+              ),
+              child: const Text('View licenses'),
             ),
           ),
         ],
